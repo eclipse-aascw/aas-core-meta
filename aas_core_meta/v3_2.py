@@ -86,7 +86,7 @@ an environment.
 
 from enum import Enum
 from re import match
-from typing import List, Optional, Set
+from typing import Annotated, List, Optional, Set, Tuple, Union
 
 from icontract import invariant, DBC, ensure
 
@@ -97,6 +97,8 @@ from aas_core_meta.marker import (
     verification,
     constant_set,
     non_mutating,
+    json_name,
+    JSONObject,
 )
 
 __version__ = "V3.2"
@@ -890,6 +892,25 @@ def matches_xs_non_negative_integer(text: str) -> bool:
     return match(pattern, text) is not None
 
 
+# noinspection PyUnusedLocal
+@verification
+@implementation_specific
+def is_xs_non_negative_integer(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:nonNegativeInteger``.
+
+    The ``text`` is assumed to match a pre-defined pattern for
+    ``xs:nonNegativeInteger``. In this function, we check that the represented
+    number fits within the value range supported by the target implementation.
+
+    See: https://www.w3.org/TR/xmlschema-2/#nonNegativeInteger
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:nonNegativeInteger``
+    """
+    raise NotImplementedError()
+
+
 @verification
 def matches_xs_positive_integer(text: str) -> bool:
     """
@@ -1384,6 +1405,18 @@ class Non_empty_XML_serializable_string(XML_serializable_string, DBC):
 )
 class Date_time_UTC(str, DBC):
     """Represent an ``xs:dateTime`` with the time zone fixed to UTC."""
+
+
+@invariant(
+    lambda self: is_xs_date_time(self),
+    "The value must represent a valid xs:dateTime.",
+)
+@invariant(
+    lambda self: matches_xs_date_time(self),
+    "The value must match the pattern of xs:dateTime.",
+)
+class Date_time(str, DBC):
+    """Represent an ``xs:dateTime``."""
 
 
 @invariant(
@@ -5990,3 +6023,5564 @@ class Data_specification_IEC_61360(Data_specification_content):
         self.value_list = value_list
         self.value = value
         self.level_type = level_type
+
+
+# region Part 2
+
+
+# region API Interfaces
+
+
+class Serialization_format(Enum):
+    """
+    Determines the format of serialization, for example JSON or XML.
+
+    The values are media types conformant to RFC 2046 and registered as
+    described in RFC 6838 (IANA).
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces.html#SerializationFormat
+    """
+
+    JSON = "application/json"
+    """
+    JSON serialization of the requested data object inside an AAS
+    Environment structure
+    """
+
+    XML = "application/xml"
+    """
+    XML serialization of the requested data object inside an AAS Environment
+    structure.
+    """
+
+    AASX = "application/aasx+xml"
+    """AASX-Package (binary data) containing the requested data object"""
+
+
+# endregion API Interfaces
+
+
+# region Data Types For Payload
+
+
+@abstract
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.extensions is not None)
+    or extension_names_are_unique(self.extensions),
+    "The name of an extension needs to be unique."
+)
+@invariant(
+    lambda self:
+    not (self.extensions is not None)
+    or len(self.extensions) >= 1,
+    "Extensions must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.display_name is not None)
+    or lang_strings_have_unique_languages(self.display_name),
+    "Display name must specify unique languages."
+)
+@invariant(
+    lambda self:
+    not (self.display_name is not None)
+    or len(self.display_name) >= 1,
+    "Display name must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.description is not None)
+    or lang_strings_have_unique_languages(self.description),
+    "Description must specify unique languages."
+)
+@invariant(
+    lambda self:
+    not (self.description is not None)
+    or len(self.description) >= 1,
+    "Description must be either not set or have at least one item."
+)
+# fmt: on
+class Descriptor(DBC):
+    """
+    The self-describing information of a network resource.
+
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#Descriptor
+    """
+
+    description: Optional[List["Lang_string_text_type"]]
+    """
+    Description or comments on the element.
+
+    The description can be provided in several languages.
+    """
+
+    display_name: Optional[List["Lang_string_name_type"]]
+    """Display name. Can be provided in several languages."""
+
+    extensions: Optional[List["Extension"]]
+    """
+    An extension of the element.
+
+    .. note::
+
+        Extensions are proprietary, i.e. they do not support global interoperability.
+    """
+
+    def __init__(
+        self,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        extensions: Optional[List["Extension"]] = None,
+    ) -> None:
+        self.description = description
+        self.display_name = display_name
+        self.extensions = extensions
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.submodel_descriptors is not None)
+    or len(self.submodel_descriptors) >= 1,
+    "Submodel descriptors must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.specific_asset_IDs is not None)
+    or len(self.specific_asset_IDs) >= 1,
+    "Specific asset IDs must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.endpoints is not None)
+    or len(self.endpoints) >= 1,
+    "Endpoints must be either not set or have at least one item."
+)
+# fmt: on
+class Asset_administration_shell_descriptor(Descriptor):
+    """
+    Descriptor of an Asset Administration Shell.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#AssetAdministrationShellDescriptor
+    """
+
+    ID: "Identifier"
+    """Globally unique identification of the Asset Administration Shell."""
+
+    administration: Optional["Administrative_information"]
+    """Administrative information of the Asset Administration Shell."""
+
+    asset_kind: Optional["Asset_kind"]
+    """
+    Denotes whether the asset of the described Asset Administration Shell is of
+    kind :attr:`Asset_kind.Type`, :attr:`Asset_kind.Instance`,
+    :attr:`Asset_kind.Role`, or :attr:`Asset_kind.Not_applicable`.
+    """
+
+    asset_type: Optional["Identifier"]
+    """
+    The type of the asset described by the Asset Administration Shell of this
+    descriptor.
+
+    See :attr:`Asset_information.asset_type` for further information.
+    """
+
+    endpoints: Optional[List["Endpoint"]]
+    """
+    Endpoint of the network resource.
+
+    .. note::
+
+        The cardinality restriction for :attr:`endpoints` allows a provider to skip
+        the declaration of the location of an Asset Administration Shell and directly
+        point to the endpoints of the contained submodels through 
+        :attr:`submodel_descriptors`' :attr:`Submodel_descriptor.endpoints`.
+        A client, therefore, might decide to skip the lookup on the Asset
+        Administration Shell.
+        Nevertheless, in case the information contained in the
+        :class:`Asset_administration_shell_descriptor` deviates from the
+        related :class:`Asset_administration_shell`, or attributes are missing,
+        the :class:`Asset_administration_shell` is always the source of truth.
+    """
+
+    global_asset_ID: Optional["Identifier"]
+    """Global reference to the asset the Asset Administration Shell is representing."""
+
+    ID_short: Optional["Name_type"]
+    """Short name of the Asset Administration Shell."""
+
+    specific_asset_IDs: Optional[List["Specific_asset_ID"]]
+    """Specific asset identifier."""
+
+    submodel_descriptors: Optional[List["Submodel_descriptor"]]
+    """Descriptor of a submodel of the Asset Administration Shell."""
+
+    def __init__(
+        self,
+        ID: "Identifier",
+        description: Optional[List["Lang_string_text_type"]] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        extensions: Optional[List["Extension"]] = None,
+        administration: Optional["Administrative_information"] = None,
+        asset_kind: Optional["Asset_kind"] = None,
+        asset_type: Optional["Identifier"] = None,
+        endpoints: Optional[List["Endpoint"]] = None,
+        global_asset_ID: Optional["Identifier"] = None,
+        ID_short: Optional["Name_type"] = None,
+        specific_asset_IDs: Optional[List["Specific_asset_ID"]] = None,
+        submodel_descriptors: Optional[List["Submodel_descriptor"]] = None,
+    ) -> None:
+        Descriptor.__init__(
+            self,
+            description=description,
+            display_name=display_name,
+            extensions=extensions,
+        )
+
+        self.ID = ID
+        self.administration = administration
+        self.asset_kind = asset_kind
+        self.asset_type = asset_type
+        self.endpoints = endpoints
+        self.global_asset_ID = global_asset_ID
+        self.ID_short = ID_short
+        self.specific_asset_IDs = specific_asset_IDs
+        self.submodel_descriptors = submodel_descriptors
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self.endpoints) >= 1,
+    "Endpoints must contain at least one item.",
+)
+@invariant(
+    lambda self:
+    not (self.supplemental_semantic_IDs is not None)
+    or (self.semantic_ID is not None),
+    "If there are supplemental semantic IDs defined then there shall be also "
+    "a main semantic ID."
+)
+@invariant(
+    lambda self:
+    not (self.supplemental_semantic_IDs is not None)
+    or len(self.supplemental_semantic_IDs) >= 1,
+    "Supplemental semantic IDs must be either not set or have at least one item."
+)
+# fmt: on
+class Submodel_descriptor(Descriptor):
+    """
+    A descriptor of a submodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#SubmodelDescriptor
+    """
+
+    endpoints: List["Endpoint"]
+    """Endpoint of the network resource."""
+
+    ID: "Identifier"
+    """Globally unique identification of the Submodel."""
+
+    administration: Optional["Administrative_information"]
+    """Administrative information of the Submodel."""
+
+    ID_short: Optional["Name_type"]
+    """Short name of the Submodel."""
+
+    semantic_ID: Optional["Reference"]
+    """
+    Identifier of the semantic definition of the Submodel.
+    """
+
+    supplemental_semantic_IDs: Optional[List["Reference"]]
+    """
+    Identifier of a supplemental semantic definition of the element called supplemental
+    semantic ID of the element.
+    """
+
+    def __init__(
+        self,
+        endpoints: List["Endpoint"],
+        ID: "Identifier",
+        description: Optional[List["Lang_string_text_type"]] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        extensions: Optional[List["Extension"]] = None,
+        administration: Optional["Administrative_information"] = None,
+        ID_short: Optional["Name_type"] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+    ) -> None:
+        Descriptor.__init__(
+            self,
+            description=description,
+            display_name=display_name,
+            extensions=extensions,
+        )
+
+        self.endpoints = endpoints
+        self.ID = ID
+        self.administration = administration
+        self.ID_short = ID_short
+        self.semantic_ID = semantic_ID
+        self.supplemental_semantic_IDs = supplemental_semantic_IDs
+
+
+class Endpoint(DBC):
+    """
+    The endpoint description of a network resource.
+
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#Endpoint
+    """
+
+    protocol_information: "Protocol_information"
+    """Protocol information of the network resource endpoint."""
+
+    interface: "Name_type"
+    """Name of the offered interface at the endpoint."""
+
+    def __init__(
+        self,
+        protocol_information: "Protocol_information",
+        interface: "Name_type",
+    ) -> None:
+        self.protocol_information = protocol_information
+        self.interface = interface
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.security_attributes is not None)
+    or len(self.security_attributes) >= 1,
+    "Security attributes must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.endpoint_protocol_version is not None)
+    or len(self.endpoint_protocol_version) >= 1,
+    "Endpoint protocol versions must be either not set or have at least one item."
+)
+# fmt: on
+class Protocol_information(DBC):
+    """
+    The protocol information of a network resource endpoint.
+
+    .. note::
+
+        The protocol information of a network resource endpoint is defined in
+        DIN SPEC 16593-2. After the release of DIN SPEC 16593-2, any required
+        updates will be made. This class is not part of the metamodel.
+
+        The information in this class is a 1:1 copy from DIN SPEC 16593-2. Required
+        changes need to be made by the related DIN working group.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#ProtocolInformation
+    """
+
+    href: "Locator_type"
+    """The endpoint address as a URL."""
+
+    endpoint_protocol: Optional["Scheme_type"]
+    """
+    Either scheme of :attr:`href` or scheme plus further information.
+
+    The scheme denotes the highest level of doubtless transmission.
+    """
+
+    endpoint_protocol_version: Optional[List["Name_type"]]
+    """
+    Each entry represents one supported version at this very endpoint, the entry shall
+    be formatted according to the regulations of the protocol specified in
+    the :attr:`href`
+    """
+
+    subprotocol: Optional["Short_ID_type"]
+    """
+    Allows for referencing sub-protocols that may be used in the context of that
+    endpoint e.g. "OPC Basic SOAP" or UA Binary
+    """
+
+    subprotocol_body: Optional["Text_type"]
+    """
+    If the sub-protocol field is present, a subprotocol body might be given to hold
+    extra information, e.g. node and namespace in an OPC UA server
+    """
+
+    subprotocol_body_encoding: Optional["Name_type"]
+    """
+    If :attr:`subprotocol_body` is present, the encoding might be explicitly defined,
+    otherwise it shall default to subprotocols encoding scheme
+    """
+
+    security_attributes: Optional[List["Security_attribute_object"]]
+    """
+    Array of :class:`Security_attribute_object`'s. Each attribute has
+    three properties:
+
+    :attr:`~Security_attribute_object.type`: enum security type or standard:
+
+    * ``NONE``;
+    * ``RFC_TLSA``, TLSA according to RFC 6698; or
+    * ``W3C_DID``, W3C DID document.
+
+    :attr:`~Security_attribute_object.key`: security attribute key according to standard
+    definitions of the security type.
+    
+    :attr:`~Security_attribute_object.value`: security attribute value, *e.g.*, DANE
+    TLSA Resource Record.
+
+    The :class:`Security_attribute_object`'s are treated as possible
+    alternatives (logical "or").
+    """
+
+    def __init__(
+        self,
+        href: "Locator_type",
+        endpoint_protocol: Optional["Scheme_type"] = None,
+        endpoint_protocol_version: Optional[List["Name_type"]] = None,
+        subprotocol: Optional["Short_ID_type"] = None,
+        subprotocol_body: Optional["Text_type"] = None,
+        subprotocol_body_encoding: Optional["Name_type"] = None,
+        security_attributes: Optional[List["Security_attribute_object"]] = None,
+    ) -> None:
+        self.href = href
+        self.endpoint_protocol = endpoint_protocol
+        self.endpoint_protocol_version = endpoint_protocol_version
+        self.subprotocol = subprotocol
+        self.subprotocol_body = subprotocol_body
+        self.subprotocol_body_encoding = subprotocol_body_encoding
+        self.security_attributes = security_attributes
+
+
+class Security_attribute_object(DBC):
+    """
+    Security attributes as defined by DIN SPEC 16593-2. After the release of
+    DIN SPEC 16593-2, any required updates will be made. This class is not part of
+    the metamodel.
+
+    The information in this table is derived from DIN SPEC 16593-2. Required changes
+    need to be made by the related DIN working group.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#SecurityAttributeObject
+    """
+
+    type: "Security_type_enum"
+    """Enum security type or standard."""
+
+    key: str
+    """Security attribute key according to standard definitions of the security type."""
+
+    value: str
+    """Security attribute value e.g. DANE TLSA Resource Record."""
+
+    def __init__(self, type: "Security_type_enum", key: str, value: str) -> None:
+        self.type = type
+        self.key = key
+        self.value = value
+
+
+class Security_type_enum(Enum):
+    """
+    The security types as defined by DIN SPEC 16593-2. After the release of
+    DIN SPEC 16593-2, any required updates will be made. This class is not part of
+    the metamodel.
+
+    The information in this table is derived from DIN SPEC 16593-2. Required changes
+    need to be made by the related DIN working group.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#SecurityTypeEnum
+    """
+
+    # NOTE (mristin):
+    # The literal ``NONE`` from the specification is named :attr:`No_security`
+    # here since ``None`` is a reserved keyword in Python.
+    No_security = "NONE"
+    """No predefined security type available."""
+
+    RFC_TLSA = "RFC_TLSA"
+    """TLSA according to RFC 6698."""
+
+    W3C_DID = "W3C_DID"
+    """Decentralized Identifiers according to the W3C Recommendation."""
+
+
+class Asset_link(DBC):
+    """
+    Asset identifier derived from either :class:`Specific_asset_ID` or
+    :attr:`Asset_information.global_asset_ID`.
+
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#AssetLink
+    """
+
+    name: "Label_type"
+    """
+    Name of the Asset identifier, *i.e.*, ``globalAssetId``, a serial number,
+    manufacturer part ID, or customer part IDs.
+    """
+
+    value: "Identifier"
+    """Value of the Asset Identifier."""
+
+    def __init__(self, name: "Label_type", value: "Identifier") -> None:
+        self.name = name
+        self.value = value
+
+
+@invariant(
+    lambda self: len(self.profiles) >= 1,
+    "Profiles must contain at least one item.",
+)
+class Service_description(DBC):
+    """
+    The self-describing information of an API Implementation. It enables
+    servers to present their capabilities to the clients, in particular
+    which profiles they implement. At least one defined profile is
+    required. Additional, proprietary attributes might be included.
+    Nevertheless, the server must not expect that a regular client
+    understands them.
+
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#ServiceDescription
+    """
+
+    profiles: List["Service_specification_profile_enum"]
+    """List of implemented server specification profiles."""
+
+    def __init__(self, profiles: List["Service_specification_profile_enum"]) -> None:
+        self.profiles = profiles
+
+
+class Service_specification_profile_enum(Enum):
+    """
+    The identifiers of the standardized service specification profiles.
+    See also Clause Service Specifications and Profiles for further
+    details.
+
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#ServiceSpecificationProfileEnum
+
+    See also Clause Service Specifications and Profiles:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/service-specifications-and-profiles.html#service-specifications-and-profiles
+    """
+
+    AAS_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "AssetAdministrationShellServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all features of the Asset Administration
+    Shell Service Specification Full Profile in version 3.0.
+    """
+
+    AAS_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all features of the Asset Administration
+    Shell Service Specification Full Profile in version 3.1.
+    """
+
+    AAS_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all features of the Asset Administration
+    Shell Service Specification Full Profile in version 3.2.
+    """
+
+    AAS_service_specification_SSP_002_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "AssetAdministrationShellServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all features of the Asset Administration
+    Shell Service Specification Read Profile in version 3.0.
+    """
+
+    AAS_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all features of the Asset Administration
+    Shell Service Specification Read Profile in version 3.1.
+    """
+
+    AAS_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all features of the Asset Administration
+    Shell Service Specification Read Profile in version 3.2.
+    """
+
+    Submodel_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/SubmodelServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Full Profile in version 3.0.
+    """
+
+    Submodel_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/SubmodelServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Full Profile in version 3.1.
+    """
+
+    Submodel_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/SubmodelServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Full Profile in version 3.2.
+    """
+
+    Submodel_service_specification_SSP_002_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/SubmodelServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Value Profile in version 3.0.
+    """
+
+    Submodel_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/SubmodelServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Value Profile in version 3.1.
+    """
+
+    Submodel_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/SubmodelServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Value Profile in version 3.2.
+    """
+
+    Submodel_service_specification_SSP_003_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/SubmodelServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Read Profile in version 3.0.
+    """
+
+    Submodel_service_specification_SSP_003_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/SubmodelServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Read Profile in version 3.1.
+    """
+
+    Submodel_service_specification_SSP_003_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/SubmodelServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all features of the Submodel Service
+    Specification Read Profile in version 3.2.
+    """
+
+    AASX_file_server_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "AasxFileServerServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the AASX File Server
+    Service Specification Full Profile in version 3.0.
+    """
+
+    AASX_file_server_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AasxFileServerServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the AASX File Server
+    Service Specification Full Profile in version 3.1.
+    """
+
+    AASX_file_server_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AasxFileServerServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the AASX File Server
+    Service Specification Full Profile in version 3.2.
+    """
+
+    AASX_file_server_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AasxFileServerServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the AASX File Server
+    Service Specification Read Profile in version 3.1.
+    """
+
+    AASX_file_server_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AasxFileServerServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the AASX File Server
+    Service Specification Read Profile in version 3.2.
+    """
+
+    AAS_registry_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Full Profile in version 3.0.
+    """
+
+    AAS_registry_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Full Profile in version 3.1.
+    """
+
+    AAS_registry_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Full Profile in version 3.2.
+    """
+
+    AAS_registry_service_specification_SSP_002_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Read Profile in version 3.0.
+    """
+
+    AAS_registry_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Read Profile in version 3.1.
+    """
+
+    AAS_registry_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Read Profile in version 3.2.
+    """
+
+    AAS_registry_service_specification_SSP_003_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Bulk Profile in version 3.1.
+    """
+
+    AAS_registry_service_specification_SSP_003_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Bulk Profile in version 3.2.
+    """
+
+    AAS_registry_service_specification_SSP_004_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Query Profile in version 3.1.
+    """
+
+    AAS_registry_service_specification_SSP_004_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Query Profile in version 3.2.
+    """
+
+    AAS_registry_service_specification_SSP_005_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-005"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Minimal Read Profile in version 3.1.
+    """
+
+    AAS_registry_service_specification_SSP_005_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRegistryServiceSpecification/SSP-005"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Registry Service Specification Minimal Read Profile in version 3.2.
+    """
+
+    Submodel_registry_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "SubmodelRegistryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Full Profile in version 3.0.
+    """
+
+    Submodel_registry_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRegistryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Full Profile in version 3.1.
+    """
+
+    Submodel_registry_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRegistryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Full Profile in version 3.2.
+    """
+
+    Submodel_registry_service_specification_SSP_002_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "SubmodelRegistryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Read Profile in version 3.0.
+    """
+
+    Submodel_registry_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRegistryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Read Profile in version 3.1.
+    """
+
+    Submodel_registry_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRegistryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Read Profile in version 3.2.
+    """
+
+    Submodel_registry_service_specification_SSP_003_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRegistryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Bulk Profile in version 3.1.
+    """
+
+    Submodel_registry_service_specification_SSP_003_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRegistryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Bulk Profile in version 3.2.
+    """
+
+    Submodel_registry_service_specification_SSP_004_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRegistryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Query Profile in version 3.1.
+    """
+
+    Submodel_registry_service_specification_SSP_004_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRegistryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Registry
+    Service Specification Query Profile in version 3.2.
+    """
+
+    Discovery_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/" "DiscoveryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Discovery Service
+    Specification Full Profile in version 3.0.
+    """
+
+    Discovery_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/" "DiscoveryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Discovery Service
+    Specification Full Profile in version 3.1.
+    """
+
+    Discovery_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/" "DiscoveryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Discovery Service
+    Specification Full Profile in version 3.2.
+    """
+
+    Discovery_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/" "DiscoveryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Discovery Service
+    Specification Read Profile in version 3.1.
+    """
+
+    AAS_repository_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Full Profile in version 3.0.
+    """
+
+    AAS_repository_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Full Profile in version 3.1.
+    """
+
+    AAS_repository_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Read Profile in version 3.2.
+    """
+
+    AAS_repository_service_specification_SSP_002_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Read Profile in version 3.0.
+    """
+
+    AAS_repository_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Read Profile in version 3.1.
+    """
+
+    AAS_repository_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Read Profile in version 3.2.
+    """
+
+    AAS_repository_service_specification_SSP_003_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Query Profile in version 3.1.
+    """
+
+    AAS_repository_service_specification_SSP_003_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Query Profile in version 3.2.
+    """
+
+    AAS_repository_service_specification_SSP_004_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Signature Profile in version 3.2.
+    """
+
+    AAS_repository_service_specification_SSP_005_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-005"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification Identifiable Profile in version 3.2.
+    """
+
+    Submodel_repository_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "SubmodelRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Full Profile in version 3.0.
+    """
+
+    Submodel_repository_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Full Profile in version 3.1.
+    """
+
+    Submodel_repository_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Full Profile in version 3.2.
+    """
+
+    Submodel_repository_service_specification_SSP_002_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "SubmodelRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Read Profile in version 3.0.
+    """
+
+    Submodel_repository_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Read Profile in version 3.1.
+    """
+
+    Submodel_repository_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Read Profile in version 3.2.
+    """
+
+    Submodel_repository_service_specification_SSP_003_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "SubmodelRepositoryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Template Profile in version 3.0.
+    """
+
+    Submodel_repository_service_specification_SSP_003_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRepositoryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Template Profile in version 3.1.
+    """
+
+    Submodel_repository_service_specification_SSP_003_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRepositoryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Template Profile in version 3.2.
+    """
+
+    Submodel_repository_service_specification_SSP_004_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "SubmodelRepositoryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Template Read Profile in version 3.0.
+    """
+
+    Submodel_repository_service_specification_SSP_004_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRepositoryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Template Read Profile in version 3.1.
+    """
+
+    Submodel_repository_service_specification_SSP_004_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRepositoryServiceSpecification/SSP-004"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Template Read Profile in version 3.2.
+    """
+
+    Submodel_repository_service_specification_SSP_005_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "SubmodelRepositoryServiceSpecification/SSP-005"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Query Profile in version 3.1.
+    """
+
+    Submodel_repository_service_specification_SSP_005_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRepositoryServiceSpecification/SSP-005"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Query Profile in version 3.2.
+    """
+
+    Submodel_repository_service_specification_SSP_006_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRepositoryServiceSpecification/SSP-006"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification Signature Profile in version 3.2.
+    """
+
+    Concept_description_repository_service_specification_SSP_001_V3_0 = (
+        "https://admin-shell.io/aas/API/3/0/"
+        "ConceptDescriptionRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Concept Description
+    Repository Service Specification Profile in version 3.0.
+    """
+
+    Concept_description_repository_service_specification_SSP_001_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "ConceptDescriptionRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Concept Description
+    Repository Service Specification Profile in version 3.1.
+    """
+
+    Concept_description_repository_service_specification_SSP_002_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "ConceptDescriptionRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Concept Description
+    Repository Service Specification Query Profile in version 3.2.
+    """
+
+    Concept_description_repository_service_specification_SSP_002_V3_1 = (
+        "https://admin-shell.io/aas/API/3/1/"
+        "ConceptDescriptionRepositoryServiceSpecification/SSP-002"
+    )
+    """
+    Indicates that the server implemented all details of the Concept Description
+    Repository Service Specification Query Profile in version 3.1.
+    """
+
+    Concept_description_repository_service_specification_SSP_003_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "ConceptDescriptionRepositoryServiceSpecification/SSP-003"
+    )
+    """
+    Indicates that the server implemented all details of the Concept Description
+    Repository Service Specification Signature Profile in version 3.2.
+    """
+
+
+@abstract
+class Recent_change(DBC):
+    """
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#RecentChange
+    """
+
+    created_at: "Date_time_UTC"
+    """The point in time at which the Identifiable object was created"""
+
+    updated_at: "Date_time_UTC"
+    """
+    The point in time at which the Identifiable object was recently updated
+    """
+
+    def __init__(
+        self, created_at: "Date_time_UTC", updated_at: "Date_time_UTC"
+    ) -> None:
+        self.created_at = created_at
+        self.updated_at = updated_at
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.specific_asset_IDs is not None)
+    or len(self.specific_asset_IDs) >= 1,
+    "Specific asset IDs must be either not set or have at least one item."
+)
+# fmt: on
+class Asset_administration_shell_recent_change(Recent_change):
+    """
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#AssetAdministrationShellRecentChange
+    """
+
+    ID: "Identifier"
+    """Globally unique identification of the Asset Administration Shell"""
+
+    global_asset_ID: Optional["Identifier"]
+    """Global reference to the asset the AAS is representing"""
+
+    specific_asset_IDs: Optional[List["Specific_asset_ID"]]
+    """Specific asset identifier"""
+
+    def __init__(
+        self,
+        created_at: "Date_time_UTC",
+        updated_at: "Date_time_UTC",
+        ID: "Identifier",
+        global_asset_ID: Optional["Identifier"] = None,
+        specific_asset_IDs: Optional[List["Specific_asset_ID"]] = None,
+    ) -> None:
+        Recent_change.__init__(self, created_at=created_at, updated_at=updated_at)
+
+        self.ID = ID
+        self.global_asset_ID = global_asset_ID
+        self.specific_asset_IDs = specific_asset_IDs
+
+
+class Concept_description_recent_change(Recent_change):
+    """
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#ConceptDescriptionRecentChange
+    """
+
+    ID: "Identifier"
+    """Globally unique identification of the Submodel"""
+
+    def __init__(
+        self,
+        created_at: "Date_time_UTC",
+        updated_at: "Date_time_UTC",
+        ID: "Identifier",
+    ) -> None:
+        Recent_change.__init__(self, created_at=created_at, updated_at=updated_at)
+
+        self.ID = ID
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.supplemental_semantic_IDs is not None)
+    or (self.semantic_ID is not None),
+    "If there are supplemental semantic IDs defined then there shall be also "
+    "a main semantic ID."
+)
+@invariant(
+    lambda self:
+    not (self.supplemental_semantic_IDs is not None)
+    or len(self.supplemental_semantic_IDs) >= 1,
+    "Supplemental semantic IDs must be either not set or have at least one item."
+)
+# fmt: on
+class Submodel_recent_change(Recent_change):
+    """
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#SubmodelRecentChange
+    """
+
+    ID: "Identifier"
+    """Globally unique identification of the Submodel"""
+
+    semantic_ID: Optional["Reference"]
+    """Identifier of the semantic definition of the Submodel"""
+
+    supplemental_semantic_IDs: Optional[List["Reference"]]
+    """
+    Identifier of a supplemental semantic definition of the element called
+    supplemental semantic ID of the element
+    """
+
+    def __init__(
+        self,
+        created_at: "Date_time_UTC",
+        updated_at: "Date_time_UTC",
+        ID: "Identifier",
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+    ) -> None:
+        Recent_change.__init__(self, created_at=created_at, updated_at=updated_at)
+
+        self.ID = ID
+        self.semantic_ID = semantic_ID
+        self.supplemental_semantic_IDs = supplemental_semantic_IDs
+
+
+@invariant(
+    lambda self: self >= 0,
+    "The value must be a non-negative integer.",
+)
+class Non_negative_integer(int, DBC):
+    """
+    The ``nonNegativeInteger`` datatype as defined by XML Schema Part 2 in
+    version 1.0.
+
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#_simple_data_types
+    """
+
+
+# region Primitive Data Types
+#
+# See:
+# https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#_primitive_data_types
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self) >= 1,
+    "The value must not be empty."
+)
+@invariant(
+    lambda self: len(self) <= 32,
+    "Code type shall have a maximum length of 32 characters.",
+)
+# fmt: on
+class Code_type(str, DBC):
+    """
+    string with max 32 and min 1 characters
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#CodeType
+    """
+
+
+class Short_ID_type(Name_type, DBC):
+    """
+    same as :class:`Name_type` (string with max 128 and min 1 characters)
+
+    .. note::
+
+        :class:`Short_ID_type` is *not* the data type of :class:`ID_short_type`
+        attributes, but for IDs which shall be shorter than the identifier type.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#ShortIdType
+    """
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self) >= 1,
+    "The value must not be empty."
+)
+@invariant(
+    lambda self: len(self) <= 2048,
+    "Locator type shall have a maximum length of 2048 characters.",
+)
+# fmt: on
+class Locator_type(str, DBC):
+    """
+    string with max 2048 and min 1 characters
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#LocatorType
+    """
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self) >= 1,
+    "The value must not be empty."
+)
+@invariant(
+    lambda self: len(self) <= 2048,
+    "Text type shall have a maximum length of 2048 characters.",
+)
+# fmt: on
+class Text_type(str, DBC):
+    """
+    string with max 2048 and min 1 characters
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#TextType
+    """
+
+
+class Scheme_type(Name_type, DBC):
+    """
+    same as NameType (string with max 128 and min 1 characters)
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#SchemeType
+    """
+
+
+# endregion Primitive Data Types
+
+
+class Status_code(Enum):
+    """
+    Generic status codes.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#StatusCode
+    """
+
+    Success = "Success"
+    """Success"""
+
+    Success_created = "SuccessCreated"
+    """Successful creation of a new resource"""
+
+    Success_accepted = "SuccessAccepted"
+    """The reception of the request was successful"""
+
+    Success_no_content = "SuccessNoContent"
+    """Success with explicitly no content in the payload"""
+
+    Client_error_bad_request = "ClientErrorBadRequest"
+    """Bad or malformed request"""
+
+    Client_not_authorized = "ClientNotAuthorized"
+    """Wrong or missing authorization credentials"""
+
+    Client_forbidden = "ClientForbidden"
+    """Authorization has been refused"""
+
+    Client_method_not_allowed = "ClientMethodNotAllowed"
+    """Operation request is not allowed"""
+
+    Client_error_resource_not_found = "ClientErrorResourceNotFound"
+    """Resource not found"""
+
+    Client_resource_conflict = "ClientResourceConflict"
+    """Conflict-creating resource (resource already exists)"""
+
+    Server_internal_error = "ServerInternalError"
+    """Unexpected error"""
+
+    Server_not_implemented = "ServerNotImplemented"
+    """
+    The server has not implemented this API Operation. Intended for cases
+    where API Operations beyond the supported service profiles are requested.
+    """
+
+    Server_error_bad_gateway = "ServerErrorBadGateway"
+    """Bad gateway"""
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.messages is not None)
+    or len(self.messages) >= 1,
+    "Messages must be either not set or have at least one item."
+)
+# fmt: on
+class Result(DBC):
+    """
+    The result object.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#Result
+    """
+
+    messages: Optional[List["Message"]]
+    """Additional messages containing information for the requester"""
+
+    def __init__(self, messages: Optional[List["Message"]] = None) -> None:
+        self.messages = messages
+
+
+class Message(DBC):
+    """
+    A message containing more information for the requester about a certain
+    happening in the backend.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#Message
+    """
+
+    message_type: "Message_type_enum"
+    """The message type"""
+
+    text: str
+    """The message text"""
+
+    code: Optional["Code_type"]
+    """Technology-dependent status or error code"""
+
+    correlation_ID: Optional["Short_ID_type"]
+    """Identifier to relate several result messages throughout several systems"""
+
+    timestamp: Optional["Date_time_UTC"]
+    """Timestamp of the message"""
+
+    def __init__(
+        self,
+        message_type: "Message_type_enum",
+        text: str,
+        code: Optional["Code_type"] = None,
+        correlation_ID: Optional["Short_ID_type"] = None,
+        timestamp: Optional["Date_time_UTC"] = None,
+    ) -> None:
+        self.message_type = message_type
+        self.text = text
+        self.code = code
+        self.correlation_ID = correlation_ID
+        self.timestamp = timestamp
+
+
+class Message_type_enum(Enum):
+    """
+    The message type.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#MessageTypeEnum
+    """
+
+    Undefined = "Undefined"
+    """
+    Used when the message type has not been set.
+
+    .. note::
+
+        Not documented in the book prose; present as a literal in the
+        OpenAPI schema's ``messageType`` enumeration.
+    """
+
+    Info = "Info"
+    """Used to inform the user about a certain fact"""
+
+    Warning = "Warning"
+    """Used for warnings; warnings may lead to errors in the subsequent execution"""
+
+    Error = "Error"
+    """Used for handling errors"""
+
+    Exception = "Exception"
+    """Used in case of an internal and/or unhandled exception"""
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.input_arguments is not None)
+    or len(self.input_arguments) >= 1,
+    "Input arguments must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.inoutput_arguments is not None)
+    or len(self.inoutput_arguments) >= 1,
+    "InOutput arguments must be either not set or have at least one item."
+)
+# fmt: on
+class Operation_request(DBC):
+    """
+    The operation request object.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#OperationRequest
+    """
+
+    input_arguments: Optional[List["Operation_variable"]]
+    """Input argument"""
+
+    inoutput_arguments: Optional[List["Operation_variable"]]
+    """InOutput argument"""
+
+    client_timeout_duration: Optional["Duration"]
+    """
+    Duration indicating when the client suggests the server to have finished
+    execution of the invoked operation. The server may take this value into account to
+    decide on its effective timeout, however, the server may or may not use by its own
+    discretion.
+    """
+
+    def __init__(
+        self,
+        input_arguments: Optional[List["Operation_variable"]] = None,
+        inoutput_arguments: Optional[List["Operation_variable"]] = None,
+        client_timeout_duration: Optional["Duration"] = None,
+    ) -> None:
+        self.input_arguments = input_arguments
+        self.inoutput_arguments = inoutput_arguments
+        self.client_timeout_duration = client_timeout_duration
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.input_arguments is not None)
+    or len(self.input_arguments) >= 1,
+    "Input arguments must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.inoutput_arguments is not None)
+    or len(self.inoutput_arguments) >= 1,
+    "InOutput arguments must be either not set or have at least one item."
+)
+# fmt: on
+class Operation_request_async(DBC):
+    """
+    The operation request object for asynchronous invocation.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification. It corresponds to the request body of the
+    ``InvokeOperationAsync`` operation, which is shaped like
+    :class:`Operation_request` with
+    :attr:`~Operation_request.client_timeout_duration` made mandatory.
+
+    .. note::
+
+        This class is deliberately *not* related to :class:`Operation_request`
+        by inheritance: a subclass constructor must exactly match
+        argument's type to the inherited property's declared
+        type, so a property declared ``Optional[Duration]`` on a base class
+        cannot be narrowed to a required ``Duration`` on a subclass. Making
+        this a standalone class lets ``client_timeout_duration`` be
+        genuinely required here.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces.html#_operation_invokeoperationasync
+    """
+
+    input_arguments: Optional[List["Operation_variable"]]
+    """Input argument"""
+
+    inoutput_arguments: Optional[List["Operation_variable"]]
+    """InOutput argument"""
+
+    client_timeout_duration: "Duration"
+    """
+    Duration indicating when the client suggests the server to have finished
+    execution of the invoked operation. The server may take this value into account to
+    decide on its effective timeout, however, the server may or may not use by its own
+    discretion.
+    """
+
+    def __init__(
+        self,
+        client_timeout_duration: "Duration",
+        input_arguments: Optional[List["Operation_variable"]] = None,
+        inoutput_arguments: Optional[List["Operation_variable"]] = None,
+    ) -> None:
+        self.client_timeout_duration = client_timeout_duration
+        self.input_arguments = input_arguments
+        self.inoutput_arguments = inoutput_arguments
+
+
+class Operation_request_value_only(DBC):
+    """
+    The operation request object in the ValueOnly notation.
+
+    .. note::
+
+        The arguments are given in the ValueOnly serialization, *i.e.*, as
+        a JSON object whose keys are the ID-shorts of the argument values and
+        whose values are the ValueOnly serializations of the argument values.
+        Their shape depends on the concrete submodel elements and can not be
+        pinned down statically, so they are represented as open JSON objects.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#operation-request-value-only
+    """
+
+    input_arguments: Optional[JSONObject["ID_short_type"]]
+    """Input argument"""
+
+    inoutput_arguments: Optional[JSONObject["ID_short_type"]]
+    """InOutput argument"""
+
+    client_timeout_duration: Optional["Duration"]
+    """
+    Duration indicating when the client suggests the server to have finished
+    execution of the invoked operation. The server may take this value into account to
+    decide on its effective timeout, however, the server may or may not use by its own
+    discretion.
+    """
+
+    def __init__(
+        self,
+        input_arguments: Optional[JSONObject["ID_short_type"]] = None,
+        inoutput_arguments: Optional[JSONObject["ID_short_type"]] = None,
+        client_timeout_duration: Optional["Duration"] = None,
+    ) -> None:
+        self.input_arguments = input_arguments
+        self.inoutput_arguments = inoutput_arguments
+        self.client_timeout_duration = client_timeout_duration
+
+
+class Operation_request_async_value_only(DBC):
+    """
+    The operation request object for asynchronous invocation in the ValueOnly
+    notation.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification. It corresponds to the request body of the
+    ``InvokeOperationAsync`` operation in the ValueOnly notation, which is
+    shaped like :class:`Operation_request_value_only` with
+    :attr:`~Operation_request_value_only.client_timeout_duration` made
+    mandatory.
+
+    .. note::
+
+        This class is deliberately *not* related to
+        :class:`Operation_request_value_only` by inheritance; see the note
+        on :class:`Operation_request_async`.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces.html#_operation_invokeoperationasync
+    """
+
+    input_arguments: Optional[JSONObject["ID_short_type"]]
+    """Input argument"""
+
+    inoutput_arguments: Optional[JSONObject["ID_short_type"]]
+    """InOutput argument"""
+
+    client_timeout_duration: "Duration"
+    """
+    Duration indicating when the client suggests the server to have finished
+    execution of the invoked operation. The server may take this value into account to
+    decide on its effective timeout, however, the server may or may not use by its own
+    discretion.
+    """
+
+    def __init__(
+        self,
+        client_timeout_duration: "Duration",
+        input_arguments: Optional[JSONObject["ID_short_type"]] = None,
+        inoutput_arguments: Optional[JSONObject["ID_short_type"]] = None,
+    ) -> None:
+        self.client_timeout_duration = client_timeout_duration
+        self.input_arguments = input_arguments
+        self.inoutput_arguments = inoutput_arguments
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.messages is not None)
+    or len(self.messages) >= 1,
+    "Messages must be either not set or have at least one item."
+)
+# fmt: on
+class Base_operation_result(DBC):
+    """
+    The object containing the intermediate state of an operation.
+
+    .. note::
+
+        This class is deliberately *not* related to :class:`Result` by
+        inheritance (and :class:`Operation_result` below is, in turn, not
+        related to this class by inheritance either). aas-core-codegen
+        refuses to generate a schema for a concrete class with concrete
+        descendants unless it is marked
+        ``@serialization(with_model_type=True)``, which would introduce a
+        ``modelType`` discriminator property that the official schema does
+        not have for this hierarchy. Flattening the hierarchy avoids that
+        mismatch, at the cost of repeating :attr:`messages` here.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#BaseOperationResult
+    """
+
+    execution_state: "Execution_state"
+    """Execution state"""
+
+    messages: Optional[List["Message"]]
+    """Additional messages containing information for the requester"""
+
+    success: Optional[bool]
+    """
+    Flag indicating whether the business operation behind the operation was
+    successful (true) or not (false)
+    """
+
+    def __init__(
+        self,
+        execution_state: "Execution_state",
+        messages: Optional[List["Message"]] = None,
+        success: Optional[bool] = None,
+    ) -> None:
+        self.execution_state = execution_state
+        self.messages = messages
+        self.success = success
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.messages is not None)
+    or len(self.messages) >= 1,
+    "Messages must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.output_arguments is not None)
+    or len(self.output_arguments) >= 1,
+    "Output arguments must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.inoutput_arguments is not None)
+    or len(self.inoutput_arguments) >= 1,
+    "InOutput arguments must be either not set or have at least one item."
+)
+# fmt: on
+class Operation_result(DBC):
+    """
+    The operation's invocation result object.
+
+    .. note::
+
+        This class is deliberately *not* related to :class:`Base_operation_result`
+        by inheritance; see the note on that class.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#OperationResult
+    """
+
+    execution_state: "Execution_state"
+    """Execution state"""
+
+    messages: Optional[List["Message"]]
+    """Additional messages containing information for the requester"""
+
+    success: Optional[bool]
+    """
+    Flag indicating whether the business operation behind the operation was
+    successful (true) or not (false)
+    """
+
+    output_arguments: Optional[List["Operation_variable"]]
+    """Output argument"""
+
+    inoutput_arguments: Optional[List["Operation_variable"]]
+    """InOutput argument"""
+
+    def __init__(
+        self,
+        execution_state: "Execution_state",
+        messages: Optional[List["Message"]] = None,
+        success: Optional[bool] = None,
+        output_arguments: Optional[List["Operation_variable"]] = None,
+        inoutput_arguments: Optional[List["Operation_variable"]] = None,
+    ) -> None:
+        self.execution_state = execution_state
+        self.messages = messages
+        self.success = success
+        self.output_arguments = output_arguments
+        self.inoutput_arguments = inoutput_arguments
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.messages is not None)
+    or len(self.messages) >= 1,
+    "Messages must be either not set or have at least one item."
+)
+# fmt: on
+class Operation_result_value_only(DBC):
+    """
+    The operation's invocation result object in the ValueOnly notation.
+
+    .. note::
+
+        This class is deliberately *not* related to :class:`Base_operation_result`
+        by inheritance; see the note on that class.
+
+    .. note::
+
+        The arguments are given in the ValueOnly serialization; see the note
+        on :class:`Operation_request_value_only`.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#operation-result-value-only
+    """
+
+    execution_state: "Execution_state"
+    """Execution state"""
+
+    messages: Optional[List["Message"]]
+    """Additional messages containing information for the requester"""
+
+    success: Optional[bool]
+    """
+    Flag indicating whether the business operation behind the operation was
+    successful (true) or not (false)
+    """
+
+    output_arguments: Optional[JSONObject["ID_short_type"]]
+    """Output argument"""
+
+    inoutput_arguments: Optional[JSONObject["ID_short_type"]]
+    """InOutput argument"""
+
+    def __init__(
+        self,
+        execution_state: "Execution_state",
+        messages: Optional[List["Message"]] = None,
+        success: Optional[bool] = None,
+        output_arguments: Optional[JSONObject["ID_short_type"]] = None,
+        inoutput_arguments: Optional[JSONObject["ID_short_type"]] = None,
+    ) -> None:
+        self.execution_state = execution_state
+        self.messages = messages
+        self.success = success
+        self.output_arguments = output_arguments
+        self.inoutput_arguments = inoutput_arguments
+
+
+class Execution_state(Enum):
+    """
+    The operation's invocation result state.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#ExecutionState
+    """
+
+    Initiated = "Initiated"
+    """The operation is ready to be executed (initial state)"""
+
+    Running = "Running"
+    """The operation is running"""
+
+    Completed = "Completed"
+    """The operation is completed"""
+
+    Canceled = "Canceled"
+    """The operation was cancelled externally"""
+
+    Failed = "Failed"
+    """The operation failed"""
+
+    Timeout = "Timeout"
+    """The operation has timed out due to given client or server timeout"""
+
+
+class Operation_handle(DBC):
+    """
+    The returned handle of an operation's asynchronous invocation used to
+    request the current state of the operation's execution.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-payload.html#OperationHandle
+    """
+
+    handle_ID: "Short_ID_type"
+    """Handle ID"""
+
+    def __init__(self, handle_ID: "Short_ID_type") -> None:
+        self.handle_ID = handle_ID
+
+
+# endregion Data Types For Payload
+
+# region Basic Operation Parameters
+#
+# See:
+# https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+
+
+class Level(Enum):
+    """
+    Indicates the depth of the structure of the response or input content.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    Deep = "Deep"
+    """
+    All elements of a requested hierarchy level and all children on all
+    sublevels are returned.
+
+    Children in this sense are SubmodelElements which are contained at the
+    'submodelElements' field of Submodels, the 'value' field of
+    SubmodelElementCollections or SubmodelElementLists, the 'statements'
+    field of Entities, or the 'annotations' field of
+    AnnotatedRelationshipElements.
+    """
+
+    Core = "Core"
+    """
+    Only elements of a requested hierarchy level as well as direct children
+    are returned. By this, a client can iterate the hierarchy step by step.
+    """
+
+
+class Content(Enum):
+    """
+    Content indicates the kind of serialization of the response or input content.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    Normal = "Normal"
+    """
+    The standard serialization of the model element or child elements is
+    applied.
+    """
+
+    Metadata = "Metadata"
+    """Only metadata of an element or child elements is returned; the value is not."""
+
+    Value = "Value"
+    """
+    Only the raw value of the model element or child elements is returned;
+    it is commonly referred to as ValueOnly-serialization.
+    """
+
+    Reference = "Reference"
+    """
+    Only applicable to Referables. Only the reference to the found element
+    is returned; potential child elements are ignored.
+    """
+
+    Path = "Path"
+    """
+    Returns the ID-short of the requested element and a list of ID-short
+    paths to child elements if the requested element is a Submodel,
+    a SubmodelElementCollection, a SubmodelElementList, an
+    AnnotatedRelationshipElement, or an Entity.
+    """
+
+
+class Extent(Enum):
+    """
+    Indicates to which extent the response or input content is being
+    serialized.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    Without_blob_value = "WithoutBLOBValue"
+    """
+    Only applicable to BLOB-elements; the BLOB content is not returned.
+
+    This is the default value.
+    """
+
+    With_blob_value = "WithBLOBValue"
+    """
+    Only applicable to BLOB-elements; the BLOB content is returned as
+    base64-encoded string.
+    """
+
+
+# endregion Basic Operation Parameters
+
+
+# region HTTP/REST API
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Paged_result(DBC):
+    """
+    An object connecting the actual list of returned items with metadata
+    information to, *e.g.*, fetch the next part of the result set.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    result: Optional[List["Referable"]]
+    """
+    List of returned items. Any kind of Referables is possible, depending on
+    the endpoint which has been requested.
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Referable"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+class Paging_metadata(DBC):
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+
+    .. note::
+
+        More attributes may be added to this class in future versions.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    cursor: Optional[str]
+    """
+    The cursor for the next part of the result set. No cursor attribute means that
+    the end of the result set has been reached.
+    """
+
+    def __init__(self, cursor: Optional[str] = None) -> None:
+        self.cursor = cursor
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.AAS_IDs is not None)
+    or len(self.AAS_IDs) >= 1,
+    "AAS IDs must be either not set or have at least one item."
+)
+# fmt: on
+class Package_description(DBC):
+    """
+    The package description consists of a system-wide unique packageId and
+    its corresponding Asset Administration Shell identifiers.
+
+    The packageId is used to identify the AASX package at the AASX file
+    server. The package description is used to list the Asset
+    Administration Shells in a given AASX package.
+
+    This class is not part of the metamodel.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#PackageDescription
+    """
+
+    package_ID: "Short_ID_type"
+    """File server specific package id"""
+
+    AAS_IDs: Optional[List["Identifier"]]
+    """Asset Administration Shell unique identifiers"""
+
+    def __init__(
+        self,
+        package_ID: "Short_ID_type",
+        AAS_IDs: Optional[List["Identifier"]] = None,
+    ) -> None:
+        self.package_ID = package_ID
+        self.AAS_IDs = AAS_IDs
+
+
+@verification
+def matches_path_item(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid idShortPath.
+
+    An idShortPath is a chain of idShorts or SubmodelElementList-indexes
+    which points to an element within a hierarchy of elements, *e.g.*,
+    ``sme1.sme2[0].p1``.
+    """
+    pattern = (
+        r"^(([A-Za-z][A-Za-z0-9_]+)|(\[[0-9]+\]))"
+        r"((\.[A-Za-z][A-Za-z0-9_]+)|(\[[0-9]+\])){0,}$"
+    )
+
+    return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: matches_path_item(self),
+    "The value must match the pattern of a path item.",
+)
+class Path_item(str, DBC):
+    """
+    A chain of idShorts or SubmodelElementList-indexes, which points to an
+    element within a hierarchy of elements, *e.g.*, ``sme1.sme2[0].p1``.
+
+    The root of the path is always a submodel, and the first element is
+    always the idShort of a first-level submodel element within it. idShorts
+    are separated by a dot, while SubmodelElementList indices are written in
+    brackets.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#_addressing_resources
+    """
+
+
+# endregion HTTP/REST API
+
+
+# region Metadata And Value Views
+
+
+# NOTE (mristin):
+# This region formalizes the Content=Metadata and Content=Value serialization
+# views referenced by SerializationModifier's Content enumeration (see class
+# Content above), specified for the individual submodel element (and submodel /
+# asset administration shell) types in Part 1's mappings document. These views
+# are not part of the metamodel itself; they are payload shapes defined for the
+# HTTP/REST API, mirrored here from the Part 2 OpenAPI schema
+# (Part2-API-Schemas/openapi.yaml) rather than from book prose, since the book
+# only describes the Content enumeration in general terms and does not spell
+# out each view's attributes.
+#
+# The *_metadata classes carry every attribute of the corresponding submodel
+# element *except* its value, mirroring the OpenAPI schema's
+# SubmodelElementAttributes/SubmodelElementMetadata/*Metadata composition.
+#
+# The *_value classes carry only the value. The ValueOnly-shaped parts of
+# their content (*e.g.*, the statements of an entity), whose shape depends on
+# the concrete submodel elements, are represented as open JSON objects keyed by
+# ID-shorts. The Value variants which are not JSON objects themselves (a bare
+# scalar, a bare array, or an open JSON object with no fixed attributes) do not
+# have a class here: PropertyValue, MultiLanguagePropertyValue,
+# SubmodelElementCollectionValue, SubmodelElementListValue, SubmodelValue and
+# SpecificAssetIdValue. SubmodelElementValue, the union over all the Value
+# variants, is not formalized either, since its alternatives can not be told
+# apart on the wire without knowing the submodel element up-front (*e.g.*,
+# a FileValue and a BlobValue are indistinguishable, and so are
+# a SubmodelElementCollectionValue and a RangeValue with a "min" and "max"
+# child). Each omission is noted where it would otherwise be expected.
+#
+# See:
+# https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+
+
+@abstract
+class Submodel_element_attributes(
+    Referable, Has_semantics, Qualifiable, Has_data_specification
+):
+    """
+    The attributes shared by all submodel elements, without their value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    # NOTE (mristin):
+    # The OpenAPI schema also lists ``HasKind`` among the mixed-in classes. We
+    # omit it here: in Part 1, Has_kind is only used by Submodel, never by an
+    # individual submodel element, so including it here would introduce an
+    # attribute (``kind``) that no submodel element actually carries. We treat
+    # this as a mistake in the OpenAPI schema rather than a deliberate Part 2
+    # addition.
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Referable.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+        )
+
+        Has_semantics.__init__(
+            self,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+        )
+
+        Qualifiable.__init__(self, qualifiers=qualifiers)
+
+        Has_data_specification.__init__(
+            self, embedded_data_specifications=embedded_data_specifications
+        )
+
+
+@abstract
+class Submodel_element_metadata(Submodel_element_attributes):
+    """
+    The metadata of a submodel element, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification. It is the polymorphic union of all the
+    ``*Metadata`` classes below.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_attributes.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Property_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Property`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    value_type: "Data_type_def_XSD"
+    """The value type of the property."""
+
+    def __init__(
+        self,
+        value_type: "Data_type_def_XSD",
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+        self.value_type = value_type
+
+
+class Range_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Range`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    value_type: "Data_type_def_XSD"
+    """The value type of the range."""
+
+    def __init__(
+        self,
+        value_type: "Data_type_def_XSD",
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+        self.value_type = value_type
+
+
+class Blob_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Blob`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class File_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`File`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Multi_language_property_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Multi_language_property`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Reference_element_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Reference_element`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Relationship_element_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Relationship_element`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Annotated_relationship_element_metadata(Submodel_element_metadata):
+    """
+    The metadata of an :class:`Annotated_relationship_element`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Entity_metadata(Submodel_element_metadata):
+    """
+    The metadata of an :class:`Entity`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Capability_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Capability`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Operation_metadata(Submodel_element_metadata):
+    """
+    The metadata of an :class:`Operation`, without its input/output/inoutput variables.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Submodel_element_collection_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Submodel_element_collection`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+
+class Basic_event_element_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Basic_event_element`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    direction: "Direction"
+    """Direction of event."""
+
+    state: "State_of_event"
+    """State of event."""
+
+    message_topic: Optional["Message_topic_type"]
+    """Topic, to which the event's message is published."""
+
+    message_broker: Optional["Reference"]
+    """Reference to a broker where the event's message is published."""
+
+    last_update: Optional["Date_time_UTC"]
+    """Timestamp of the last update of the event."""
+
+    min_interval: Optional["Duration"]
+    """For continuous signalling, the minimum interval between two consecutive events."""
+
+    max_interval: Optional["Duration"]
+    """For continuous signalling, the maximum interval between two consecutive events."""
+
+    def __init__(
+        self,
+        direction: "Direction",
+        state: "State_of_event",
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+        message_topic: Optional["Message_topic_type"] = None,
+        message_broker: Optional["Reference"] = None,
+        last_update: Optional["Date_time_UTC"] = None,
+        min_interval: Optional["Duration"] = None,
+        max_interval: Optional["Duration"] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+        self.direction = direction
+        self.state = state
+        self.message_topic = message_topic
+        self.message_broker = message_broker
+        self.last_update = last_update
+        self.min_interval = min_interval
+        self.max_interval = max_interval
+
+
+class Submodel_element_list_metadata(Submodel_element_metadata):
+    """
+    The metadata of a :class:`Submodel_element_list`, without its value.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    order_relevant: Optional[bool]
+    """Defines whether order in the list is relevant."""
+
+    semantic_ID_list_element: Optional["Reference"]
+    """Semantic ID the submodel elements contained in the list match to."""
+
+    type_value_list_element: "AAS_submodel_elements"
+    """The submodel element type of the submodel elements contained in the list."""
+
+    value_type_list_element: Optional["Data_type_def_XSD"]
+    """The value type of the submodel elements contained in the list."""
+
+    def __init__(
+        self,
+        type_value_list_element: "AAS_submodel_elements",
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+        order_relevant: Optional[bool] = None,
+        semantic_ID_list_element: Optional["Reference"] = None,
+        value_type_list_element: Optional["Data_type_def_XSD"] = None,
+    ) -> None:
+        Submodel_element_metadata.__init__(
+            self,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+            qualifiers=qualifiers,
+            embedded_data_specifications=embedded_data_specifications,
+        )
+
+        self.order_relevant = order_relevant
+        self.semantic_ID_list_element = semantic_ID_list_element
+        self.type_value_list_element = type_value_list_element
+        self.value_type_list_element = value_type_list_element
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.qualifiers is not None)
+    or (
+        not any(
+            qualifier.kind_or_default() == Qualifier_kind.Template_qualifier
+            for qualifier in self.qualifiers
+        ) or (
+            self.kind_or_default() == Modelling_kind.Template
+        )
+    ),
+    "Constraint AASd-119: If any qualifier kind value of a qualifiable qualifier is "
+    "equal to template qualifier and the qualified element has kind then the qualified "
+    "element shall be of kind template."
+)
+# fmt: on
+class Submodel_metadata(
+    Identifiable, Has_kind, Has_semantics, Qualifiable, Has_data_specification
+):
+    """
+    The metadata of a :class:`Submodel`, without its submodel elements.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    def __init__(
+        self,
+        ID: Identifier,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        administration: Optional["Administrative_information"] = None,
+        kind: Optional["Modelling_kind"] = None,
+        semantic_ID: Optional["Reference"] = None,
+        supplemental_semantic_IDs: Optional[List["Reference"]] = None,
+        qualifiers: Optional[List["Qualifier"]] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+    ) -> None:
+        Identifiable.__init__(
+            self,
+            ID=ID,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            administration=administration,
+        )
+
+        Has_kind.__init__(self, kind=kind)
+
+        Has_semantics.__init__(
+            self,
+            semantic_ID=semantic_ID,
+            supplemental_semantic_IDs=supplemental_semantic_IDs,
+        )
+
+        Qualifiable.__init__(self, qualifiers=qualifiers)
+
+        Has_data_specification.__init__(
+            self, embedded_data_specifications=embedded_data_specifications
+        )
+
+
+class Asset_administration_shell_metadata(Identifiable, Has_data_specification):
+    """
+    The metadata of an :class:`Asset_administration_shell`, without its
+    asset information and submodel references.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    derived_from: Optional["Reference"]
+    """
+    The reference to the Asset Administration Shell, which the Asset
+    Administration Shell was derived from.
+    """
+
+    def __init__(
+        self,
+        ID: Identifier,
+        extensions: Optional[List["Extension"]] = None,
+        category: Optional[Name_type] = None,
+        ID_short: Optional[ID_short_type] = None,
+        display_name: Optional[List["Lang_string_name_type"]] = None,
+        description: Optional[List["Lang_string_text_type"]] = None,
+        administration: Optional["Administrative_information"] = None,
+        embedded_data_specifications: Optional[
+            List["Embedded_data_specification"]
+        ] = None,
+        derived_from: Optional["Reference"] = None,
+    ) -> None:
+        Identifiable.__init__(
+            self,
+            ID=ID,
+            extensions=extensions,
+            category=category,
+            ID_short=ID_short,
+            display_name=display_name,
+            description=description,
+            administration=administration,
+        )
+
+        Has_data_specification.__init__(
+            self, embedded_data_specifications=embedded_data_specifications
+        )
+
+        self.derived_from = derived_from
+
+
+# NOTE (mristin):
+# The *_value classes below are deliberately *not* related by inheritance,
+# and none of them is used as a base class.
+#
+# Consequently, each is marked with @serialization(with_model_type=False):
+# since none of them is part of a polymorphic hierarchy here, no "modelType"
+# discriminator should be emitted for them on serialization.
+#
+# Several variants from the HTTP schema have no class here at all, since
+# a class is always serialized as a JSON object with fixed attributes:
+#
+# * ``PropertyValue`` is a raw JSON string, number or boolean, not an
+#   object -- use :py:data:`JSONValue` where needed.
+# * ``MultiLanguagePropertyValue`` is a bare JSON array of single-entry
+#   objects, language tag to text, not an object with fixed attributes.
+# * ``SubmodelElementCollectionValue`` and ``SubmodelValue`` are
+#   ValueOnly-shaped JSON objects keyed by the ID-shorts of the contained
+#   elements -- use :class:`JSONObject` over :class:`ID_short_type` where
+#   needed.
+# * ``SubmodelElementListValue`` is a bare JSON array of values, not an
+#   object.
+# * ``SpecificAssetIdValue`` is a single-entry JSON object, name to value,
+#   so it is represented as an open JSON object in :class:`Entity_value`.
+# * ``SubmodelElementValue`` is a union over all of the above, which can not
+#   be decided on the wire without knowing the submodel element up-front.
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self.keys) >= 1,
+    "Keys must contain at least one item."
+)
+# fmt: on
+@serialization(with_model_type=False)
+class Reference_element_value(DBC):
+    """
+    The value of a :class:`Reference_element`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    type: "Reference_types"
+    """
+    Type of the reference.
+
+    Denotes whether the reference is an external reference or a model
+    reference.
+    """
+
+    keys: List["Key"]
+    """Unique references in their name space."""
+
+    referred_semantic_ID: Optional["Reference"]
+    """
+    Expected :attr:`Has_semantics.semantic_ID` of the referenced model
+    element.
+    """
+
+    def __init__(
+        self,
+        type: "Reference_types",
+        keys: List["Key"],
+        referred_semantic_ID: Optional["Reference"] = None,
+    ) -> None:
+        self.type = type
+        self.keys = keys
+        self.referred_semantic_ID = referred_semantic_ID
+
+
+@serialization(with_model_type=False)
+class Blob_value(DBC):
+    """
+    The value of a :class:`Blob`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    content_type: Optional["Content_type"]
+    """The content type of the BLOB, *e.g.*, ``application/pdf``."""
+
+    value: Optional["Blob_type"]
+    """The BLOB content."""
+
+    def __init__(
+        self,
+        content_type: Optional["Content_type"] = None,
+        value: Optional["Blob_type"] = None,
+    ) -> None:
+        self.content_type = content_type
+        self.value = value
+
+
+@serialization(with_model_type=False)
+class File_value(DBC):
+    """
+    The value of a :class:`File`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    content_type: Optional["Content_type"]
+    """The content type of the file, *e.g.*, ``application/pdf``."""
+
+    value: Optional["Path_type"]
+    """The path or URL to the file content."""
+
+    def __init__(
+        self,
+        content_type: Optional["Content_type"] = None,
+        value: Optional["Path_type"] = None,
+    ) -> None:
+        self.content_type = content_type
+        self.value = value
+
+
+@serialization(with_model_type=False)
+class Range_value(DBC):
+    """
+    The value of a :class:`Range`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    min: float
+    """The minimum value of the range."""
+
+    max: float
+    """The maximum value of the range."""
+
+    def __init__(self, min: float, max: float) -> None:
+        self.min = min
+        self.max = max
+
+
+@serialization(with_model_type=False)
+class Relationship_element_value(DBC):
+    """
+    The value of a :class:`Relationship_element`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    first: Optional["Reference"]
+    """Reference to the first element in the relationship."""
+
+    second: Optional["Reference"]
+    """Reference to the second element in the relationship."""
+
+    def __init__(
+        self,
+        first: Optional["Reference"] = None,
+        second: Optional["Reference"] = None,
+    ) -> None:
+        self.first = first
+        self.second = second
+
+
+@serialization(with_model_type=False)
+class Basic_event_element_value(DBC):
+    """
+    The value of a :class:`Basic_event_element`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    observed: "Reference"
+    """Reference to the :class:`Referable`, which defines the scope of the event."""
+
+    def __init__(self, observed: "Reference") -> None:
+        self.observed = observed
+
+
+@serialization(with_model_type=False)
+class Annotated_relationship_element_value(DBC):
+    """
+    The value of an :class:`Annotated_relationship_element`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    .. note::
+
+        The annotations are given in the ValueOnly serialization, *i.e.*, as
+        a JSON object whose keys are the ID-shorts of the annotations and
+        whose values are the ValueOnly serializations of the annotations.
+        Their shape depends on the concrete data elements and can not be
+        pinned down statically, so they are represented as an open JSON
+        object.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    first: Optional["Reference"]
+    """Reference to the first element in the relationship."""
+
+    second: Optional["Reference"]
+    """Reference to the second element in the relationship."""
+
+    annotations: Optional[JSONObject["ID_short_type"]]
+    """Annotations which hold for the relationship between the two elements."""
+
+    def __init__(
+        self,
+        first: Optional["Reference"] = None,
+        second: Optional["Reference"] = None,
+        annotations: Optional[JSONObject["ID_short_type"]] = None,
+    ) -> None:
+        self.first = first
+        self.second = second
+        self.annotations = annotations
+
+
+# NOTE (mristin):
+# We follow the Part 2 OpenAPI schema (and the Part 1 ValueOnly JSON schema)
+# for ``specificAssetIds``, where each item is a single-entry JSON object
+# mapping the name of the specific asset ID to its value. The Part 1 prose,
+# in contrast, states that the items are serialized as SpecificAssetId in
+# format "Normal".
+#
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.specific_asset_IDs is not None)
+    or len(self.specific_asset_IDs) >= 1,
+    "Specific asset IDs must be either not set or have at least one item."
+)
+# fmt: on
+@serialization(with_model_type=False)
+class Entity_value(DBC):
+    """
+    The value of an :class:`Entity`.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    .. note::
+
+        The statements are given in the ValueOnly serialization, *i.e.*, as
+        a JSON object whose keys are the ID-shorts of the statements and
+        whose values are the ValueOnly serializations of the statements.
+        Their shape depends on the concrete submodel elements and can not be
+        pinned down statically, so they are represented as an open JSON
+        object.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/specification/interfaces-operation-parameters.html#SerializationModifier
+    """
+
+    entity_type: Optional["Entity_type"]
+    """
+    Describes whether the entity is a co-managed entity or a self-managed
+    entity.
+    """
+
+    global_asset_ID: Optional["Identifier"]
+    """
+    Global identifier of the asset the entity is representing.
+    """
+
+    specific_asset_IDs: Optional[List[JSONObject["Label_type"]]]
+    """
+    Additional domain-specific, typically proprietary identifiers for the asset,
+    each given as a single-entry JSON object mapping
+    the :attr:`Specific_asset_ID.name` to the :attr:`Specific_asset_ID.value`.
+    """
+
+    statements: Optional[JSONObject["ID_short_type"]]
+    """
+    Describes statements applicable to the entity by a set of submodel elements,
+    typically with a qualified value.
+    """
+
+    def __init__(
+        self,
+        entity_type: Optional["Entity_type"] = None,
+        global_asset_ID: Optional["Identifier"] = None,
+        specific_asset_IDs: Optional[List[JSONObject["Label_type"]]] = None,
+        statements: Optional[JSONObject["ID_short_type"]] = None,
+    ) -> None:
+        self.entity_type = entity_type
+        self.global_asset_ID = global_asset_ID
+        self.specific_asset_IDs = specific_asset_IDs
+        self.statements = statements
+
+
+# endregion Metadata And Value Views
+
+
+# region GetXxxResult Envelopes
+
+
+# NOTE (mristin):
+# Each class here is one endpoint's paginated response envelope: the
+# official API composes it as PagedResult + a "result" property with a
+# type specific to that endpoint. We do not model this via inheritance from
+# Paged_result: doing so would give Paged_result concrete descendants, which would force
+# @serialization(with_model_type=True) on it and introduce a
+# "modelType" discriminator that the official API does not have anywhere
+# in this family. Each class below is therefore standalone, duplicating
+# paging_metadata by hand (same reasoning as for Result/
+# Base_operation_result/Operation_result above).
+#
+# GetSubmodelElementsValueResult and GetSubmodelsValueResult type their
+# "result" as ValueOnly-shaped JSON, so we represent it as an open JSON object
+# keyed by ID-shorts. Mind that, unlike all the other GetXxxResult schemas,
+# the OpenAPI schema types these results as a single JSON object, not as
+# an array of items, and we follow it here.
+#
+# See:
+# https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_asset_administration_shells_result(DBC):
+    """
+    The result of listing all Asset Administration Shells.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Asset_administration_shell"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Asset_administration_shell"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_asset_administration_shells_metadata_result(DBC):
+    """
+    The result of listing the metadata of all Asset Administration Shells.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Asset_administration_shell_metadata"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Asset_administration_shell_metadata"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_all_asset_administration_shells_recent_changes_result(DBC):
+    """
+    The result of listing the recent changes of all Asset Administration Shells.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Asset_administration_shell_recent_change"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Asset_administration_shell_recent_change"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_asset_administration_shell_descriptors_result(DBC):
+    """
+    The result of listing all Asset Administration Shell descriptors.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Asset_administration_shell_descriptor"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Asset_administration_shell_descriptor"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_concept_descriptions_result(DBC):
+    """
+    The result of listing all concept descriptions.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Concept_description"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Concept_description"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_all_concept_descriptions_recent_changes_result(DBC):
+    """
+    The result of listing the recent changes of all concept descriptions.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Concept_description_recent_change"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Concept_description_recent_change"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_package_descriptions_result(DBC):
+    """
+    The result of listing all AASX package descriptions.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Package_description"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Package_description"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_path_items_result(DBC):
+    """
+    The result of listing idShortPaths.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Path_item"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Path_item"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_references_result(DBC):
+    """
+    The result of listing references.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Reference"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Reference"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_submodel_descriptors_result(DBC):
+    """
+    The result of listing all submodel descriptors.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Submodel_descriptor"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Submodel_descriptor"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_submodel_elements_metadata_result(DBC):
+    """
+    The result of listing the metadata of all submodel elements.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Submodel_element_metadata"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Submodel_element_metadata"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or all(
+        item.ID_short is not None
+        for item in self.result
+    ),
+    "ID-shorts need to be defined for all the items of result according to "
+    "AASd-117 (ID-short of non-identifiable Referables not being a direct child of "
+    "a Submodel element list shall be specified)."
+)
+# fmt: on
+class Get_submodel_elements_result(DBC):
+    """
+    The result of listing all submodel elements.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Submodel_element"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Submodel_element"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+class Get_submodel_elements_value_result(DBC):
+    """
+    The result of listing the submodel elements in the ValueOnly notation.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    .. note::
+
+        The result is given in the ValueOnly serialization, *i.e.*, as
+        a JSON object whose keys are the ID-shorts of the submodel elements
+        and whose values are their ValueOnly serializations. Their shape
+        depends on the concrete submodel elements and can not be pinned down
+        statically, so the result is represented as an open JSON object.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[JSONObject["ID_short_type"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[JSONObject["ID_short_type"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_all_submodels_recent_changes_result(DBC):
+    """
+    The result of listing the recent changes of all submodels.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Submodel_recent_change"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Submodel_recent_change"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_submodels_metadata_result(DBC):
+    """
+    The result of listing the metadata of all submodels.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Submodel_metadata"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Submodel_metadata"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.result is not None)
+    or len(self.result) >= 1,
+    "Result must be either not set or have at least one item."
+)
+# fmt: on
+class Get_submodels_result(DBC):
+    """
+    The result of listing all submodels.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[List["Submodel"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[List["Submodel"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+class Get_submodels_value_result(DBC):
+    """
+    The result of listing the submodels in the ValueOnly notation.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    .. note::
+
+        The result is given in the ValueOnly serialization, *i.e.*, as
+        a JSON object whose keys are the ID-shorts of the submodel elements
+        and whose values are their ValueOnly serializations. Their shape
+        depends on the concrete submodel elements and can not be pinned down
+        statically, so the result is represented as an open JSON object.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
+    """
+
+    paging_metadata: Annotated["Paging_metadata", json_name("paging_metadata")]
+    """
+    Additional information for the client to, *e.g.*, fetch the next part of
+    the result set.
+    """
+
+    result: Optional[JSONObject["ID_short_type"]]
+    """The returned items."""
+
+    def __init__(
+        self,
+        paging_metadata: "Paging_metadata",
+        result: Optional[JSONObject["ID_short_type"]] = None,
+    ) -> None:
+        self.paging_metadata = paging_metadata
+        self.result = result
+
+
+# endregion GetXxxResult Envelopes
+
+
+# region AAS Query Language
+
+
+# NOTE (mristin):
+# This region formalizes the JSON serialization of the AAS Query Language
+# following the normative JSON schema given in the specification, see:
+# https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+#
+# The copy of the schema in the Part 2 OpenAPI schema
+# (Part2-API-Schemas/openapi.yaml) is less strict: it does not constrain
+# the ``REFERENCE`` attribute by a pattern, and it does not require
+# the non-field operands of a comparison to be of the same type.
+#
+# The language is also shared with the AAS Access Rules of Part 4
+# (IDTA-01004), but we formalize here only the part which is accepted as
+# a query.
+#
+# The schema represents each expression as a JSON object with exactly
+# one of many possible properties (*e.g.*, ``{"$and": [...]}``,
+# ``{"$eq": [...]}``). We model each such alternative as a separate class
+# with a single required property, and group the alternatives in named unions
+# (*e.g.*, :py:data:`Logical_expression` or :py:data:`Value`). Since the
+# required properties of the alternatives within a union are pairwise
+# distinct, the alternatives can be told apart on the wire by the property
+# alone, so no ``modelType`` discriminator is needed.
+#
+# The schema types each comparison by the type of its operands (*e.g.*,
+# ``numericalComparisonItems`` or ``stringItems``). As the operator (*e.g.*,
+# ``$eq``) is the same JSON property for all the operand types, we can not
+# dispatch on the operand types statically. Hence, we represent the operands
+# of the overloaded comparisons (``$eq``, ``$ne``, ``$gt``, ``$ge``, ``$lt``
+# and ``$le``) as a pair of any :py:data:`Value`, and check the types of
+# the operands in the invariants (see :func:`are_equality_comparable` and
+# :func:`are_order_comparable`).
+#
+# We deviate from the schema in the following points:
+#
+# * In ``$timeCast``, the schema allows either a ``stringValue`` or
+#   a ``dateTimeOperand``. Both allow an ``$attribute`` alternative, and
+#   ``dateTimeAttributeItem`` is a subset of ``attributeItem``. We therefore
+#   leave out :class:`Date_time_attribute_operand` in
+#   :py:data:`Time_cast_operand` so that the ``$attribute`` alternative remains
+#   decidable, and a date-time attribute is covered by
+#   :class:`Attribute_operand`.
+#
+# * We require :attr:`Query.filters` to have at least one item, if specified,
+#   in line with the other lists in the meta-model.
+#
+# * The schema limits the identifier in a ``REFERENCE`` attribute to 2048
+#   characters with a bounded repetition (``{1,2048}``) in the pattern. We
+#   use an unbounded repetition (``+``) in :func:`matches_reference_identifier`
+#   instead, since such a large bound is not supported by all the regular
+#   expression engines (*e.g.*, the one of Go limits the repetition to 1000).
+#
+# The query results (``QueryResultAssetAdministrationShell``,
+# ``QueryResultSubmodel`` *etc.*) are not formalized here, since their
+# ``result`` items are either an object or a plain string (depending on
+# ``$select``), which can not be represented as a named union of classes.
+#
+# See:
+# https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html
+
+
+@verification
+def matches_field_identifier(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid field identifier of the query language.
+
+    A field identifier starts with a root (``$aas``, ``$sm``, ``$sme``, ``$cd``,
+    ``$aasdesc`` or ``$smdesc``), optionally followed by an idShortPath in case
+    of ``$sme``, and ends with an attribute declaration after ``#``, *e.g.*,
+    ``$sme.someCollection.someProperty#value``.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` conforms to the pattern
+    """
+    array_index = "(0|[1-9][0-9]*)"
+    optional_index = f"\\[{array_index}?\\]"
+    reference_clause = f"(type|keys{optional_index}\\.(type|value))"
+    semantic_id_clause = f"semanticId(\\.{reference_clause})?"
+    supplemental_semantic_id_clause = (
+        f"supplementalSemanticIds({optional_index})?(\\.{reference_clause})?"
+    )
+    specific_asset_ids_clause = (
+        f"specificAssetIds{optional_index}"
+        f"\\.(name|value|externalSubjectId(\\.{reference_clause})?)"
+    )
+    endpoint_clause = (
+        f"endpoints{optional_index}\\.(interface|protocolinformation\\.href)"
+    )
+    sm_descriptor_clause = (
+        f"({semantic_id_clause}|{supplemental_semantic_id_clause}"
+        f"|idShort|id|{endpoint_clause})"
+    )
+    id_short = "[A-Za-z]([A-Za-z0-9_-]*[A-Za-z0-9_])?"
+    id_short_path_segment = f"{id_short}({optional_index})*"
+    id_short_path = f"{id_short_path_segment}(\\.{id_short_path_segment})*"
+
+    fields_aas = (
+        f"(idShort|id|assetInformation\\.assetKind|assetInformation\\.assetType"
+        f"|assetInformation\\.globalAssetId"
+        f"|assetInformation\\.{specific_asset_ids_clause}"
+        f"|submodels{optional_index}(\\.{reference_clause})?)"
+    )
+    fields_sm = f"({semantic_id_clause}|{supplemental_semantic_id_clause}|idShort|id)"
+    fields_sme = (
+        f"({semantic_id_clause}|{supplemental_semantic_id_clause}"
+        f"|idShort|value|valueType|language)"
+    )
+    fields_cd = "(idShort|id)"
+    fields_aas_descriptor = (
+        f"(idShort|id|assetKind|assetType|globalAssetId"
+        f"|{specific_asset_ids_clause}|{endpoint_clause}"
+        f"|submodelDescriptors{optional_index}\\.{sm_descriptor_clause})"
+    )
+
+    pattern = (
+        f"^(\\$aas#{fields_aas}"
+        f"|\\$sm#{fields_sm}"
+        f"|\\$sme(\\.{id_short_path})?#{fields_sme}"
+        f"|\\$cd#{fields_cd}"
+        f"|\\$aasdesc#{fields_aas_descriptor}"
+        f"|\\$smdesc#{sm_descriptor_clause})$"
+    )
+
+    return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: matches_field_identifier(self),
+    "The value must match the pattern of a field identifier.",
+)
+class Field_identifier(str, DBC):
+    """
+    Identify a field whose value is compared in a query, *e.g.*,
+    ``$aas#assetInformation.assetKind`` or ``$sme.someProperty#value``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+    """
+
+
+@verification
+def matches_fragment_field_identifier(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid fragment field identifier.
+
+    A fragment field identifier points to the part of the returned data which
+    should be filtered, *e.g.*, ``$aas#assetInformation.specificAssetIds[]``
+    or ``$sme.someCollection``.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` conforms to the pattern
+    """
+    array_index = "(0|[1-9][0-9]*)"
+    optional_index = f"\\[{array_index}?\\]"
+    reference_clause = f"keys({optional_index})?"
+    semantic_id_clause = f"semanticId(\\.{reference_clause})?"
+    supplemental_semantic_id_clause = (
+        f"supplementalSemanticIds({optional_index}(\\.{reference_clause})?)?"
+    )
+    specific_asset_ids_clause = (
+        f"specificAssetIds({optional_index}"
+        f"(\\.externalSubjectId(\\.{reference_clause})?)?)?"
+    )
+    submodels_clause = f"submodels({optional_index}(\\.{reference_clause})?)?"
+    endpoint_clause = f"endpoints({optional_index})?"
+    sm_descriptor_clause = (
+        f"({semantic_id_clause}|{supplemental_semantic_id_clause}"
+        f"|idShort|{endpoint_clause})"
+    )
+    submodel_descriptors_clause = (
+        f"submodelDescriptors({optional_index}(\\.{sm_descriptor_clause})?)?"
+    )
+    id_short = "[A-Za-z]([A-Za-z0-9_-]*[A-Za-z0-9_])?"
+    id_short_path_segment = f"{id_short}({optional_index})*"
+    id_short_path = f"{id_short_path_segment}(\\.{id_short_path_segment})*"
+
+    fields_aas = (
+        f"(idShort|assetInformation\\.assetType|assetInformation\\.globalAssetId"
+        f"|assetInformation\\.{specific_asset_ids_clause}|{submodels_clause})"
+    )
+    fields_sm = f"({semantic_id_clause}|{supplemental_semantic_id_clause}|idShort)"
+    fields_sme = (
+        f"({semantic_id_clause}|{supplemental_semantic_id_clause}"
+        f"|idShort|value|valueType|language)"
+    )
+    fields_aas_descriptor = (
+        f"(idShort|description|displayName|extension|administration"
+        f"|assetKind|assetType|globalAssetId|{specific_asset_ids_clause}"
+        f"|{endpoint_clause}|{submodel_descriptors_clause})"
+    )
+
+    pattern = (
+        f"^(\\$aas#{fields_aas}"
+        f"|\\$sm#{fields_sm}"
+        f"|\\$sme(\\.{id_short_path})?(#{fields_sme})?"
+        f"|\\$cd#idShort"
+        f"|\\$aasdesc#{fields_aas_descriptor}"
+        f"|\\$smdesc#{sm_descriptor_clause})$"
+    )
+
+    return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: matches_fragment_field_identifier(self),
+    "The value must match the pattern of a fragment field identifier.",
+)
+class Fragment_field_identifier(str, DBC):
+    """
+    Identify the part of the returned data to which a query filter applies,
+    *e.g.*, ``$aas#assetInformation.specificAssetIds[]``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+    """
+
+
+@invariant(
+    lambda self: len(self) >= 1,
+    "The value must have at least one character.",
+)
+class Standard_string(str, DBC):
+    """
+    Represent a string literal in a query with at least one character.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+    """
+
+
+@verification
+def matches_hex_literal(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid hexadecimal literal of the query language.
+
+    A hexadecimal literal is prefixed with ``16#``, *e.g.*, ``16#1F``.
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` conforms to the pattern
+    """
+    pattern = "^16#[0-9A-F]+$"
+
+    return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: matches_hex_literal(self),
+    "The value must match the pattern of a hexadecimal literal.",
+)
+class Hex_literal_type(str, DBC):
+    """
+    Represent a hexadecimal literal in a query, *e.g.*, ``16#1F``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+    """
+
+
+@verification
+def matches_date_time_literal(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid date-time literal of the query language.
+
+    A date-time literal is a valid calendar date, followed by an optional ``T``
+    separator, the time and an optional time zone, *e.g.*,
+    ``2024-02-29T12:00:00Z``.
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` conforms to the pattern
+    """
+    digit = "[0-9]"
+    month_with_31_days = f"(0[13578]|1[02])-(0[1-9]|[12]{digit}|3[01])"
+    month_with_30_days = f"(0[469]|11)-(0[1-9]|[12]{digit}|30)"
+    february = f"02-(0[1-9]|1{digit}|2[0-8])"
+    common_date = f"{digit}{{4}}-({month_with_31_days}|{month_with_30_days}|{february})"
+    leap_year = (
+        f"({digit}{{2}}(0[48]|[2468][048]|[13579][26])"
+        f"|([02468][048]|[13579][26])00)"
+    )
+    leap_day = f"{leap_year}-02-29"
+    time = (
+        f"(([01]{digit}|2[0-3]):[0-5]{digit}(:[0-5]{digit})?(\\.{digit}+)?"
+        f"|24:00(:00)?(\\.0+)?)"
+    )
+    timezone = f"(Z|[+-]((0{digit}|1[0-3]):[0-5]{digit}|14:00))"
+
+    pattern = f"^(({common_date})|({leap_day}))T?{time}{timezone}?$"
+
+    return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: matches_date_time_literal(self),
+    "The value must match the pattern of a date-time literal.",
+)
+class Date_time_literal_type(str, DBC):
+    """
+    Represent a date-time literal in a query, *e.g.*, ``2024-02-29T12:00:00Z``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+
+@verification
+def matches_time_literal(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid time literal of the query language.
+
+    A time literal is given as ``HH:MM``, ``HH:MM:SS``, optionally with
+    fractional seconds and an optional time zone, *e.g.*, ``12:00:00+01:00``.
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` conforms to the pattern
+    """
+    digit = "[0-9]"
+    time = (
+        f"(([01]{digit}|2[0-3]):[0-5]{digit}(:[0-5]{digit})?(\\.{digit}+)?"
+        f"|24:00(:00)?(\\.0+)?)"
+    )
+    timezone = f"(Z|[+-]((0{digit}|1[0-3]):[0-5]{digit}|14:00))"
+
+    pattern = f"^{time}{timezone}?$"
+
+    return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: matches_time_literal(self),
+    "The value must match the pattern of a time literal.",
+)
+class Time_literal_type(str, DBC):
+    """
+    Represent a time literal in a query, *e.g.*, ``12:00:00+01:00``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+
+@verification
+def matches_reference_identifier(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid reference identifier.
+
+    A reference identifier points to an attribute of a specific instance given
+    by its identifier, *e.g.*, ``$sm("https://example.com/sm")#idShort`` or
+    ``$sme("https://example.com/sm").someProperty#value``. A quotation mark and
+    a reverse solidus in the identifier are escaped as ``\\"`` and ``\\\\``,
+    respectively.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` conforms to the pattern
+    """
+    array_index = "(0|[1-9][0-9]*)"
+    optional_index = f"\\[{array_index}?\\]"
+    reference_clause = f"(type|keys{optional_index}\\.(type|value))"
+    semantic_id_clause = f"semanticId(\\.{reference_clause})?"
+    supplemental_semantic_id_clause = (
+        f"supplementalSemanticIds({optional_index})?(\\.{reference_clause})?"
+    )
+    specific_asset_ids_clause = (
+        f"specificAssetIds{optional_index}"
+        f"\\.(name|value|externalSubjectId(\\.{reference_clause})?)"
+    )
+    id_short = "[A-Za-z]([A-Za-z0-9_-]*[A-Za-z0-9_])?"
+    id_short_path_segment = f"{id_short}({optional_index})*"
+    id_short_path = f"{id_short_path_segment}(\\.{id_short_path_segment})*"
+
+    # NOTE (mristin):
+    # The identifier is limited to the characters of an XML-serializable
+    # string, where the quotation mark and the reverse solidus need to be
+    # escaped.
+    # noinspection SpellCheckingInspection
+    identifier_character = (
+        r"([\x09\x0A\x0D\x20-\x21\x23-\x5B\x5D-\uD7FF\uE000-\uFFFD"
+        r'\U00010000-\U0010FFFF]|\\["\\])'
+    )
+    identifier_instance = f'\\("{identifier_character}+"\\)'
+
+    fields_aas = (
+        f"(idShort|id|assetInformation\\.assetKind|assetInformation\\.assetType"
+        f"|assetInformation\\.globalAssetId"
+        f"|assetInformation\\.{specific_asset_ids_clause}"
+        f"|submodels{optional_index}(\\.{reference_clause})?)"
+    )
+    fields_sm = f"({semantic_id_clause}|{supplemental_semantic_id_clause}|idShort|id)"
+    fields_sme = (
+        f"({semantic_id_clause}|{supplemental_semantic_id_clause}"
+        f"|idShort|value|valueType|language)"
+    )
+
+    pattern = (
+        f"^(\\$aas{identifier_instance}#{fields_aas}"
+        f"|\\$sm{identifier_instance}#{fields_sm}"
+        f"|\\$cd{identifier_instance}#(idShort|id)"
+        f"|\\$sme{identifier_instance}\\.{id_short_path}#{fields_sme})$"
+    )
+
+    return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: matches_reference_identifier(self),
+    "The value must match the pattern of a reference identifier.",
+)
+class Reference_identifier(str, DBC):
+    """
+    Identify an attribute of a specific instance, *e.g.*,
+    ``$sm("https://example.com/sm")#idShort``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+    """
+
+
+class Global_attribute_kind(Enum):
+    """
+    Enumerate the global attributes which can be used in a query.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+    """
+
+    Local_now = "LOCALNOW"
+    """The current date and time in the local time zone of the server"""
+
+    UTC_now = "UTCNOW"
+    """The current date and time in UTC"""
+
+    Client_now = "CLIENTNOW"
+    """The current date and time of the client"""
+
+    Anonymous = "ANONYMOUS"
+    """The anonymous user, *i.e.*, a request without authentication"""
+
+
+class Date_time_global_attribute_kind(Enum):
+    """
+    Enumerate the global attributes which can be used as a date-time operand
+    in a query.
+
+    This is a subset of :class:`Global_attribute_kind`.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#query-grammar
+    """
+
+    Local_now = "LOCALNOW"
+    """The current date and time in the local time zone of the server"""
+
+    UTC_now = "UTCNOW"
+    """The current date and time in UTC"""
+
+    Client_now = "CLIENTNOW"
+    """The current date and time of the client"""
+
+
+class Claim_attribute(DBC):
+    """
+    Refer to a claim of the requester, *e.g.*, from an access token.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    claim: Annotated[str, json_name("CLAIM")]
+    """Name of the claim"""
+
+    def __init__(self, claim: str) -> None:
+        self.claim = claim
+
+
+class Global_attribute(DBC):
+    """
+    Refer to a global attribute such as the current time.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    kind: Annotated["Global_attribute_kind", json_name("GLOBAL")]
+    """Kind of the global attribute"""
+
+    def __init__(self, kind: "Global_attribute_kind") -> None:
+        self.kind = kind
+
+
+class Reference_attribute(DBC):
+    """
+    Refer to an attribute of a specific AAS element.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    reference: Annotated["Reference_identifier", json_name("REFERENCE")]
+    """Reference to the attribute"""
+
+    def __init__(self, reference: "Reference_identifier") -> None:
+        self.reference = reference
+
+
+class Date_time_attribute_item(DBC):
+    """
+    Refer to a global attribute which gives a date and time.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    kind: Annotated["Date_time_global_attribute_kind", json_name("GLOBAL")]
+    """Kind of the global attribute"""
+
+    def __init__(self, kind: "Date_time_global_attribute_kind") -> None:
+        self.kind = kind
+
+
+class Field_operand(DBC):
+    """
+    Use the value of a field as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    field: Annotated["Field_identifier", json_name("$field")]
+    """Identifier of the field"""
+
+    def __init__(self, field: "Field_identifier") -> None:
+        self.field = field
+
+
+class String_literal(DBC):
+    """
+    Use a string literal as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    str_val: Annotated["Standard_string", json_name("$strVal")]
+    """The string value"""
+
+    def __init__(self, str_val: "Standard_string") -> None:
+        self.str_val = str_val
+
+
+class Attribute_operand(DBC):
+    """
+    Use an attribute as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    attribute: Annotated["Attribute_item", json_name("$attribute")]
+    """The attribute"""
+
+    def __init__(self, attribute: "Attribute_item") -> None:
+        self.attribute = attribute
+
+
+class Number_literal(DBC):
+    """
+    Use a number literal as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    num_val: Annotated[float, json_name("$numVal")]
+    """The numerical value"""
+
+    def __init__(self, num_val: float) -> None:
+        self.num_val = num_val
+
+
+class Hex_literal(DBC):
+    """
+    Use a hexadecimal literal as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    hex_val: Annotated["Hex_literal_type", json_name("$hexVal")]
+    """The hexadecimal value"""
+
+    def __init__(self, hex_val: "Hex_literal_type") -> None:
+        self.hex_val = hex_val
+
+
+class Date_time_literal(DBC):
+    """
+    Use a date-time literal as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    date_time_val: Annotated["Date_time_literal_type", json_name("$dateTimeVal")]
+    """The date-time value"""
+
+    def __init__(self, date_time_val: "Date_time_literal_type") -> None:
+        self.date_time_val = date_time_val
+
+
+class Time_literal(DBC):
+    """
+    Use a time literal as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    time_val: Annotated["Time_literal_type", json_name("$timeVal")]
+    """The time value"""
+
+    def __init__(self, time_val: "Time_literal_type") -> None:
+        self.time_val = time_val
+
+
+class Boolean_literal(DBC):
+    """
+    Use a boolean literal as an operand or as a logical expression.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    boolean: Annotated[bool, json_name("$boolean")]
+    """The boolean value"""
+
+    def __init__(self, boolean: bool) -> None:
+        self.boolean = boolean
+
+
+class String_cast(DBC):
+    """
+    Cast the operand to ``xs:string``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+    str_cast: Annotated["Value", json_name("$strCast")]
+    """The operand to be cast"""
+
+    def __init__(self, str_cast: "Value") -> None:
+        self.str_cast = str_cast
+
+
+class Number_cast(DBC):
+    """
+    Cast the operand to a number.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+    num_cast: Annotated["Value", json_name("$numCast")]
+    """The operand to be cast"""
+
+    def __init__(self, num_cast: "Value") -> None:
+        self.num_cast = num_cast
+
+
+class Hex_cast(DBC):
+    """
+    Cast the operand to ``xs:hexBinary``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+    hex_cast: Annotated["Value", json_name("$hexCast")]
+    """The operand to be cast"""
+
+    def __init__(self, hex_cast: "Value") -> None:
+        self.hex_cast = hex_cast
+
+
+class Boolean_cast(DBC):
+    """
+    Cast the operand to ``xs:boolean``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+    bool_cast: Annotated["Value", json_name("$boolCast")]
+    """The operand to be cast"""
+
+    def __init__(self, bool_cast: "Value") -> None:
+        self.bool_cast = bool_cast
+
+
+class Date_time_cast(DBC):
+    """
+    Cast the string operand to ``xs:dateTime``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+    date_time_cast: Annotated["String_value", json_name("$dateTimeCast")]
+    """The operand to be cast"""
+
+    def __init__(self, date_time_cast: "String_value") -> None:
+        self.date_time_cast = date_time_cast
+
+
+class Time_cast(DBC):
+    """
+    Cast the string or date-time operand to ``xs:time``.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#casting
+    """
+
+    time_cast: Annotated["Time_cast_operand", json_name("$timeCast")]
+    """The operand to be cast"""
+
+    def __init__(self, time_cast: "Time_cast_operand") -> None:
+        self.time_cast = time_cast
+
+
+class Day_of_week(DBC):
+    """
+    Extract the day of the week from the date-time operand as a number.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    day_of_week: Annotated["Date_time_operand", json_name("$dayOfWeek")]
+    """The date-time operand"""
+
+    def __init__(self, day_of_week: "Date_time_operand") -> None:
+        self.day_of_week = day_of_week
+
+
+class Day_of_month(DBC):
+    """
+    Extract the day of the month from the date-time operand as a number.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    day_of_month: Annotated["Date_time_operand", json_name("$dayOfMonth")]
+    """The date-time operand"""
+
+    def __init__(self, day_of_month: "Date_time_operand") -> None:
+        self.day_of_month = day_of_month
+
+
+class Month(DBC):
+    """
+    Extract the month from the date-time operand as a number.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    month: Annotated["Date_time_operand", json_name("$month")]
+    """The date-time operand"""
+
+    def __init__(self, month: "Date_time_operand") -> None:
+        self.month = month
+
+
+class Year(DBC):
+    """
+    Extract the year from the date-time operand as a number.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    year: Annotated["Date_time_operand", json_name("$year")]
+    """The date-time operand"""
+
+    def __init__(self, year: "Date_time_operand") -> None:
+        self.year = year
+
+
+class Date_time_attribute_operand(DBC):
+    """
+    Use a date-time global attribute as an operand.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+    """
+
+    attribute: Annotated["Date_time_attribute_item", json_name("$attribute")]
+    """The attribute"""
+
+    def __init__(self, attribute: "Date_time_attribute_item") -> None:
+        self.attribute = attribute
+
+
+# noinspection PyUnusedLocal
+@verification
+@implementation_specific
+def are_equality_comparable(left: "Value", right: "Value") -> bool:
+    """
+    Check that :paramref:`left` and :paramref:`right` can be compared for
+    (in)equality.
+
+    Following the normative JSON schema of the query language, the two operands
+    need to be of the same type: a string, a number, a hexadecimal, a boolean,
+    a date-time or a time. A field is implicitly cast to the type of the other
+    operand, and can hence be compared with an operand of any type. A global
+    attribute giving a date and time (``LOCALNOW``, ``UTCNOW`` or ``CLIENTNOW``)
+    can be used both as a string and as a date-time.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    :param left: First operand of the comparison
+    :param right: Second operand of the comparison
+    :returns: True if the operands can be compared for (in)equality
+    """
+    # NOTE (mristin):
+    # This implementation will not be transpiled, but is given here as reference.
+    all_types = {"string", "number", "hex", "boolean", "date_time", "time"}
+
+    def types_of(value: "Value") -> Set[str]:
+        if isinstance(value, Field_operand):
+            return all_types
+
+        if isinstance(value, Attribute_operand):
+            if isinstance(
+                value.attribute, Global_attribute
+            ) and value.attribute.kind in (
+                Global_attribute_kind.Local_now,
+                Global_attribute_kind.UTC_now,
+                Global_attribute_kind.Client_now,
+            ):
+                return {"string", "date_time"}
+
+            return {"string"}
+
+        if isinstance(value, (String_literal, String_cast)):
+            return {"string"}
+
+        if isinstance(
+            value,
+            (Number_literal, Number_cast, Day_of_week, Day_of_month, Month, Year),
+        ):
+            return {"number"}
+
+        if isinstance(value, (Hex_literal, Hex_cast)):
+            return {"hex"}
+
+        if isinstance(value, (Boolean_literal, Boolean_cast)):
+            return {"boolean"}
+
+        if isinstance(value, (Date_time_literal, Date_time_cast)):
+            return {"date_time"}
+
+        if isinstance(value, (Time_literal, Time_cast)):
+            return {"time"}
+
+        raise AssertionError(f"Unexpected value: {value!r}")
+
+    return len(types_of(left) & types_of(right)) > 0
+
+
+# noinspection PyUnusedLocal
+@verification
+@implementation_specific
+def are_order_comparable(left: "Value", right: "Value") -> bool:
+    """
+    Check that :paramref:`left` and :paramref:`right` can be compared by order.
+
+    The operands need to be comparable for (in)equality (see
+    ``are_equality_comparable``), but booleans can not be ordered.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    :param left: First operand of the comparison
+    :param right: Second operand of the comparison
+    :returns: True if the operands can be compared by order
+    """
+    # NOTE (mristin):
+    # This implementation will not be transpiled, but is given here as reference.
+    return (
+        are_equality_comparable(left, right)
+        and not isinstance(left, (Boolean_literal, Boolean_cast))
+        and not isinstance(right, (Boolean_literal, Boolean_cast))
+    )
+
+
+# fmt: off
+@invariant(
+    lambda self: are_equality_comparable(self.eq[0], self.eq[1]),
+    "The operands must be comparable by (in)equality."
+)
+# fmt: on
+class Equal_comparison(DBC):
+    """
+    Check whether the two operands are equal.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    The operands must be of compatible types, see
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    eq: Annotated[Tuple["Value", "Value"], json_name("$eq")]
+    """The two operands"""
+
+    def __init__(self, eq: Tuple["Value", "Value"]) -> None:
+        self.eq = eq
+
+
+# fmt: off
+@invariant(
+    lambda self: are_equality_comparable(self.ne[0], self.ne[1]),
+    "The operands must be comparable by (in)equality."
+)
+# fmt: on
+class Not_equal_comparison(DBC):
+    """
+    Check whether the two operands are not equal.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    The operands must be of compatible types, see
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    ne: Annotated[Tuple["Value", "Value"], json_name("$ne")]
+    """The two operands"""
+
+    def __init__(self, ne: Tuple["Value", "Value"]) -> None:
+        self.ne = ne
+
+
+# fmt: off
+@invariant(
+    lambda self: are_order_comparable(self.gt[0], self.gt[1]),
+    "The operands must be comparable by order."
+)
+# fmt: on
+class Greater_than_comparison(DBC):
+    """
+    Check whether the first operand is greater than the second one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    The operands must be of compatible types, see
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    gt: Annotated[Tuple["Value", "Value"], json_name("$gt")]
+    """The two operands"""
+
+    def __init__(self, gt: Tuple["Value", "Value"]) -> None:
+        self.gt = gt
+
+
+# fmt: off
+@invariant(
+    lambda self: are_order_comparable(self.ge[0], self.ge[1]),
+    "The operands must be comparable by order."
+)
+# fmt: on
+class Greater_than_or_equal_comparison(DBC):
+    """
+    Check whether the first operand is greater than or equal to the second one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    The operands must be of compatible types, see
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    ge: Annotated[Tuple["Value", "Value"], json_name("$ge")]
+    """The two operands"""
+
+    def __init__(self, ge: Tuple["Value", "Value"]) -> None:
+        self.ge = ge
+
+
+# fmt: off
+@invariant(
+    lambda self: are_order_comparable(self.lt[0], self.lt[1]),
+    "The operands must be comparable by order."
+)
+# fmt: on
+class Less_than_comparison(DBC):
+    """
+    Check whether the first operand is less than the second one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    The operands must be of compatible types, see
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    lt: Annotated[Tuple["Value", "Value"], json_name("$lt")]
+    """The two operands"""
+
+    def __init__(self, lt: Tuple["Value", "Value"]) -> None:
+        self.lt = lt
+
+
+# fmt: off
+@invariant(
+    lambda self: are_order_comparable(self.le[0], self.le[1]),
+    "The operands must be comparable by order."
+)
+# fmt: on
+class Less_than_or_equal_comparison(DBC):
+    """
+    Check whether the first operand is less than or equal to the second one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    The operands must be of compatible types, see
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_json_schema
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    le: Annotated[Tuple["Value", "Value"], json_name("$le")]
+    """The two operands"""
+
+    def __init__(self, le: Tuple["Value", "Value"]) -> None:
+        self.le = le
+
+
+class Contains_comparison(DBC):
+    """
+    Check whether the second string operand is a substring of the first one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    contains: Annotated[Tuple["String_value", "String_value"], json_name("$contains")]
+    """The two string operands"""
+
+    def __init__(self, contains: Tuple["String_value", "String_value"]) -> None:
+        self.contains = contains
+
+
+class Starts_with_comparison(DBC):
+    """
+    Check whether the first string operand starts with the second one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    starts_with: Annotated[
+        Tuple["String_value", "String_value"], json_name("$starts-with")
+    ]
+    """The two string operands"""
+
+    def __init__(self, starts_with: Tuple["String_value", "String_value"]) -> None:
+        self.starts_with = starts_with
+
+
+class Ends_with_comparison(DBC):
+    """
+    Check whether the first string operand ends with the second one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    ends_with: Annotated[Tuple["String_value", "String_value"], json_name("$ends-with")]
+    """The two string operands"""
+
+    def __init__(self, ends_with: Tuple["String_value", "String_value"]) -> None:
+        self.ends_with = ends_with
+
+
+class Regex_comparison(DBC):
+    """
+    Check whether the first string operand matches the regular expression
+    given as the second one.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_comparison_operators
+    """
+
+    regex: Annotated[Tuple["String_value", "String_value"], json_name("$regex")]
+    """The string operand and the regular expression"""
+
+    def __init__(self, regex: Tuple["String_value", "String_value"]) -> None:
+        self.regex = regex
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self.match_operands) >= 1,
+    "Match operands must have at least one item."
+)
+# fmt: on
+class Match_clause(DBC):
+    """
+    Check that all the operands hold for the same element of a list.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_match_of_elements_in_lists
+    """
+
+    match_operands: Annotated[List["Match_expression"], json_name("$match")]
+    """The comparisons and nested matches which all need to hold"""
+
+    def __init__(self, match_operands: List["Match_expression"]) -> None:
+        self.match_operands = match_operands
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self.and_operands) >= 2,
+    "And operands must have at least two items."
+)
+# fmt: on
+class And_expression(DBC):
+    """
+    Connect two or more expressions through a logical AND.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_logical_expressions
+    """
+
+    and_operands: Annotated[List["Logical_expression"], json_name("$and")]
+    """The expressions to be connected"""
+
+    def __init__(self, and_operands: List["Logical_expression"]) -> None:
+        self.and_operands = and_operands
+
+
+# fmt: off
+@invariant(
+    lambda self: len(self.or_operands) >= 2,
+    "Or operands must have at least two items."
+)
+# fmt: on
+class Or_expression(DBC):
+    """
+    Connect two or more expressions through a logical OR.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_logical_expressions
+    """
+
+    or_operands: Annotated[List["Logical_expression"], json_name("$or")]
+    """The expressions to be connected"""
+
+    def __init__(self, or_operands: List["Logical_expression"]) -> None:
+        self.or_operands = or_operands
+
+
+class Not_expression(DBC):
+    """
+    Negate an expression.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_logical_expressions
+    """
+
+    not_operand: Annotated["Logical_expression", json_name("$not")]
+    """The expression to be negated"""
+
+    def __init__(self, not_operand: "Logical_expression") -> None:
+        self.not_operand = not_operand
+
+
+class Query_select(Enum):
+    """
+    Enumerate what a query returns instead of the full objects.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_select_expression
+    """
+
+    ID = "id"
+    """Return only the identifiers of the matching objects"""
+
+
+class Query_filter(DBC):
+    """
+    Filter a fragment of the returned data by a condition.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html#_query_filter
+    """
+
+    fragment: Annotated["Fragment_field_identifier", json_name("$fragment")]
+    """The fragment of the returned data to which the filter applies"""
+
+    condition: Annotated["Logical_expression", json_name("$condition")]
+    """The condition which the elements of the fragment need to fulfill"""
+
+    def __init__(
+        self,
+        fragment: "Fragment_field_identifier",
+        condition: "Logical_expression",
+    ) -> None:
+        self.fragment = fragment
+        self.condition = condition
+
+
+# fmt: off
+@invariant(
+    lambda self:
+    not (self.filters is not None)
+    or len(self.filters) >= 1,
+    "Filters must be either not set or have at least one item."
+)
+# fmt: on
+class Query(DBC):
+    """
+    A query in the AAS Query Language.
+
+    This class is not part of the metamodel and is not itself a named class
+    in the specification.
+
+    See:
+    https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/query-language.html
+    """
+
+    select: Annotated[Optional["Query_select"], json_name("$select")]
+    """
+    What the query returns instead of the full objects.
+
+    If not specified, the full objects are returned.
+    """
+
+    condition: Annotated["Logical_expression", json_name("$condition")]
+    """The condition which the returned objects need to fulfill"""
+
+    filters: Annotated[Optional[List["Query_filter"]], json_name("$filters")]
+    """Filters to reduce the returned data"""
+
+    def __init__(
+        self,
+        condition: "Logical_expression",
+        select: Optional["Query_select"] = None,
+        filters: Optional[List["Query_filter"]] = None,
+    ) -> None:
+        self.condition = condition
+        self.select = select
+        self.filters = filters
+
+
+#: An attribute which can be used as an operand
+Attribute_item = Union[Claim_attribute, Global_attribute, Reference_attribute]
+
+#: An operand which evaluates to a string
+String_value = Union[Field_operand, String_literal, String_cast, Attribute_operand]
+
+#: An operand which evaluates to a date and time
+Date_time_operand = Union[
+    Date_time_literal, Date_time_cast, Date_time_attribute_operand
+]
+
+#: An operand which can be cast to ``xs:time``
+Time_cast_operand = Union[String_value, Date_time_literal, Date_time_cast]
+
+#: An operand which evaluates to a number
+Numerical_operand = Union[
+    Number_literal, Number_cast, Day_of_week, Day_of_month, Month, Year
+]
+
+#: An operand which evaluates to a hexadecimal
+Hex_operand = Union[Hex_literal, Hex_cast]
+
+#: An operand which evaluates to a boolean
+Bool_operand = Union[Boolean_literal, Boolean_cast]
+
+#: An operand which evaluates to a time
+Time_operand = Union[Time_literal, Time_cast]
+
+# NOTE (mristin):
+# We can not include :py:data:`Date_time_operand` as a whole in
+# :py:data:`Value`, since its :class:`Date_time_attribute_operand` shares
+# the JSON property ``$attribute`` with :class:`Attribute_operand` of
+# :py:data:`String_value`, so the two could not be told apart on the wire.
+# A date-time global attribute is covered by :class:`Attribute_operand`
+# instead, and we list the remaining date-time operands individually.
+
+#: Any operand of a comparison
+Value = Union[
+    String_value,
+    Numerical_operand,
+    Hex_operand,
+    Bool_operand,
+    Date_time_literal,
+    Date_time_cast,
+    Time_operand,
+]
+
+#: An expression which can be nested in a :class:`Match_clause`
+Match_expression = Union[
+    Match_clause,
+    Equal_comparison,
+    Not_equal_comparison,
+    Greater_than_comparison,
+    Greater_than_or_equal_comparison,
+    Less_than_comparison,
+    Less_than_or_equal_comparison,
+    Contains_comparison,
+    Starts_with_comparison,
+    Ends_with_comparison,
+    Regex_comparison,
+]
+
+#: An expression which evaluates to a boolean
+Logical_expression = Union[
+    And_expression,
+    Or_expression,
+    Not_expression,
+    Boolean_literal,
+    Match_expression,
+]
+
+
+# endregion AAS Query Language
+
+
+# endregion Part 2

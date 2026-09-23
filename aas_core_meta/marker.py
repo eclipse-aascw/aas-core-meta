@@ -5,16 +5,49 @@ from typing import (
     Type,
     Optional,
     Sequence,
+    Mapping,
     Callable,
     Any,
     overload,
     Set,
     List,
+    Union,
 )
 
 T = TypeVar("T")
 
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
+
+K = TypeVar("K", bound=str)
+
+
+class JSONObject(Mapping[K, "JSONValue"]):
+    """
+    Represent an open, JSON-object-shaped value.
+
+    This is meant to be used for the properties whose value can not be pinned
+    down to a single modeled class, but is always object-shaped and open-keyed,
+    such as the *value-only* serialization of a submodel or a submodel element
+    collection.
+
+    ``K`` denotes the type of the keys (usually ``str``, but can also be
+    a constrained string), and is meant purely as a generic, static type
+    parameter — this class carries no behavior on top of
+    :class:`~typing.Mapping`.
+
+    The value is always :py:data:`JSONValue` and can not be customized --
+    a custom value type would make it much harder to verify and to generate
+    correct code for in every implementation language, and we could not
+    identify a concrete need for it in the AAS meta-model itself. Please
+    contact the developers if you need to customize the value type.
+    """
+
+
+JSONArray = Sequence["JSONValue"]
+
+#: Represent an arbitrary JSON-able value, be it a primitive, an array or
+#: an open, JSON-object-shaped value (see :class:`JSONObject`).
+JSONValue = Union[bool, int, float, str, JSONArray, JSONObject[str]]
 
 
 @overload
@@ -83,6 +116,47 @@ class serialization:
 
     def __call__(self, func: Type[T]) -> Type[T]:
         return func
+
+
+class json_name:
+    """
+    Mark the explicit name of a property in the JSON serialization.
+
+    This is meant to be used as metadata in ``typing.Annotated`` on the type
+    annotation of a property, *e.g.*,
+    ``foo: Annotated[Optional[str], json_name("someFoo")]``, for the cases
+    where the JSON name can not be inferred from the property name by
+    the usual naming convention (as, for example, for the properties
+    starting with a special character in a query language).
+    """
+
+    def __init__(self, name: str) -> None:
+        """
+        Initialize with the given values.
+
+        :param name: explicit name of the property in the JSON serialization
+        """
+        self.name = name
+
+
+class xml_name:
+    """
+    Mark the explicit name of a property in the XML serialization.
+
+    This is meant to be used as metadata in ``typing.Annotated`` on the type
+    annotation of a property, *e.g.*,
+    ``foo: Annotated[Optional[str], xml_name("someFoo")]``, for the cases
+    where the XML name can not be inferred from the property name by
+    the usual naming convention.
+    """
+
+    def __init__(self, name: str) -> None:
+        """
+        Initialize with the given values.
+
+        :param name: explicit name of the property in the XML serialization
+        """
+        self.name = name
 
 
 def verification(thing: CallableT) -> CallableT:
