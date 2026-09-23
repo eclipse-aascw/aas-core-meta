@@ -863,6 +863,507 @@ class Test_matches_xs_string(unittest.TestCase):
         assert not v3_2.matches_xs_string("\x00")
 
 
+class Test_matches_field_identifier(unittest.TestCase):
+    # NOTE (mristin):
+    # The cases are taken over from the test suite of the specification,
+    # see:
+    # https://github.com/admin-shell-io/aas-specs-api/blob/main/documentation/IDTA-01002-3/modules/ROOT/pages/http-rest-api/test/query/test_field_identifier_regex.py.
+    ALLOWED = [
+        "$aas#idShort",
+        "$aas#id",
+        "$aas#assetInformation.assetKind",
+        "$aas#assetInformation.assetType",
+        "$aas#assetInformation.globalAssetId",
+        "$aas#assetInformation.specificAssetIds[].name",
+        "$aas#assetInformation.specificAssetIds[0].name",
+        "$aas#assetInformation.specificAssetIds[].value",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.type",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.keys[].type",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.keys[0].value",
+        "$aas#submodels[]",
+        "$aas#submodels[].type",
+        "$aas#submodels[].keys[].type",
+        "$aas#submodels[0].keys[0].value",
+        "$sm#semanticId",
+        "$sm#semanticId.type",
+        "$sm#semanticId.keys[].type",
+        "$sm#semanticId.keys[0].value",
+        "$sm#supplementalSemanticIds",
+        "$sm#supplementalSemanticIds[]",
+        "$sm#supplementalSemanticIds[0]",
+        "$sm#supplementalSemanticIds.type",
+        "$sm#supplementalSemanticIds[].type",
+        "$sm#supplementalSemanticIds[].keys[].type",
+        "$sm#supplementalSemanticIds[0].keys[0].value",
+        "$sm#idShort",
+        "$sm#id",
+        "$sme#semanticId",
+        "$sme#semanticId.type",
+        "$sme#semanticId.keys[].type",
+        "$sme#semanticId.keys[0].value",
+        "$sme#supplementalSemanticIds",
+        "$sme#supplementalSemanticIds[]",
+        "$sme#supplementalSemanticIds[0].type",
+        "$sme#supplementalSemanticIds[].keys[].type",
+        "$sme#supplementalSemanticIds[0].keys[0].value",
+        "$sme#idShort",
+        "$sme#value",
+        "$sme#valueType",
+        "$sme#language",
+        "$sme.AddressInformation#supplementalSemanticIds",
+        "$sme.AddressInformation#supplementalSemanticIds[].keys[].value",
+        "$sme.AddressInformation#value",
+        "$sme.AddressInformation.Zipcode#value",
+        "$sme.AddressInformation[]#value",
+        "$sme.AddressInformation[0].Zipcode#value",
+        "$cd#idShort",
+        "$cd#id",
+        "$aasdesc#idShort",
+        "$aasdesc#id",
+        "$aasdesc#assetKind",
+        "$aasdesc#assetType",
+        "$aasdesc#globalAssetId",
+        "$aasdesc#specificAssetIds[].name",
+        "$aasdesc#specificAssetIds[].value",
+        "$aasdesc#specificAssetIds[].externalSubjectId",
+        "$aasdesc#specificAssetIds[].externalSubjectId.type",
+        "$aasdesc#specificAssetIds[].externalSubjectId.keys[].value",
+        "$aasdesc#endpoints[].interface",
+        "$aasdesc#endpoints[0].protocolinformation.href",
+        "$aasdesc#submodelDescriptors[].semanticId",
+        "$aasdesc#submodelDescriptors[].semanticId.type",
+        "$aasdesc#submodelDescriptors[].semanticId.keys[].value",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[]",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[0].type",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[].keys[].value",
+        "$aasdesc#submodelDescriptors[].idShort",
+        "$aasdesc#submodelDescriptors[].id",
+        "$aasdesc#submodelDescriptors[].endpoints[].interface",
+        "$aasdesc#submodelDescriptors[0].endpoints[0].protocolinformation.href",
+        "$smdesc#semanticId",
+        "$smdesc#semanticId.type",
+        "$smdesc#semanticId.keys[].value",
+        "$smdesc#supplementalSemanticIds",
+        "$smdesc#supplementalSemanticIds[]",
+        "$smdesc#supplementalSemanticIds[0].type",
+        "$smdesc#supplementalSemanticIds[].keys[].value",
+        "$smdesc#idShort",
+        "$smdesc#id",
+        "$smdesc#endpoints[].interface",
+        "$smdesc#endpoints[0].protocolinformation.href",
+    ]
+
+    NOT_ALLOWED = [
+        "$aas#assetInformation.specificAssetIds",
+        "$aas#assetInformation.specificAssetIds[]",
+        "$aas#assetInformation.specificAssetIds[01].name",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.keys",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.keys[]",
+        "$aas#submodels",
+        "$aas#submodels[01].type",
+        "$aas#submodels[].keys",
+        "$aas#submodels[].keys[]",
+        "$sm#semanticId.keys",
+        "$sm#semanticId.keys[]",
+        "$sm#supplementalSemanticIds[01]",
+        "$sm#supplementalSemanticIds.keys",
+        "$sm#supplementalSemanticIds.keys[]",
+        "$sm#supplementalSemanticIds[].keys",
+        "$sm#supplementalSemanticIds[].keys[]",
+        "$sme",
+        "$sme.AddressInformation",
+        "$sme.AddressInformation[]",
+        "$sme.AddressInformation#id",
+        "$sme.AddressInformation#bogus",
+        "$sme.AddressInformation#supplementalSemanticIds[01]",
+        "$sme.AddressInformation#supplementalSemanticIds.keys",
+        "$sme.AddressInformation#supplementalSemanticIds[].keys",
+        "$sme.1Invalid#value",
+        "$cd",
+        "$cd#description",
+        "$aasdesc#description",
+        "$aasdesc#displayName",
+        "$aasdesc#extension",
+        "$aasdesc#administration",
+        "$aasdesc#specificAssetIds",
+        "$aasdesc#specificAssetIds[]",
+        "$aasdesc#specificAssetIds[].externalSubjectId.keys",
+        "$aasdesc#specificAssetIds[].externalSubjectId.keys[]",
+        "$aasdesc#endpoints",
+        "$aasdesc#endpoints[]",
+        "$aasdesc#endpoints[01].interface",
+        "$aasdesc#endpoints[].protocolinformation",
+        "$aasdesc#submodelDescriptors",
+        "$aasdesc#submodelDescriptors[]",
+        "$aasdesc#submodelDescriptors[01].idShort",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds.keys",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[].keys",
+        "$aasdesc#submodelDescriptors[].endpoints",
+        "$aasdesc#submodelDescriptors[].endpoints[]",
+        "$smdesc#semanticId.keys",
+        "$smdesc#semanticId.keys[]",
+        "$smdesc#supplementalSemanticIds.keys",
+        "$smdesc#supplementalSemanticIds[01]",
+        "$smdesc#supplementalSemanticIds[].keys",
+        "$smdesc#endpoints",
+        "$smdesc#endpoints[]",
+        "$smdesc#endpoints[01].interface",
+        "$smdesc#endpoints[].protocolinformation",
+    ]
+
+    def test_allowed(self) -> None:
+        for text in Test_matches_field_identifier.ALLOWED:
+            with self.subTest(text=text):
+                assert v3_2.matches_field_identifier(text)
+
+    def test_not_allowed(self) -> None:
+        for text in Test_matches_field_identifier.NOT_ALLOWED:
+            with self.subTest(text=text):
+                assert not v3_2.matches_field_identifier(text)
+
+
+class Test_matches_fragment_field_identifier(unittest.TestCase):
+    # NOTE (mristin):
+    # The cases are taken over from the test suite of the specification,
+    # see:
+    # https://github.com/admin-shell-io/aas-specs-api/blob/main/documentation/IDTA-01002-3/modules/ROOT/pages/http-rest-api/test/query/test_fragment_field_identifier_regex.py.
+    ALLOWED = [
+        "$aas#idShort",
+        "$aas#assetInformation.assetType",
+        "$aas#assetInformation.globalAssetId",
+        "$aas#assetInformation.specificAssetIds",
+        "$aas#assetInformation.specificAssetIds[]",
+        "$aas#assetInformation.specificAssetIds[0]",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.keys",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.keys[]",
+        "$aas#assetInformation.specificAssetIds[].externalSubjectId.keys[0]",
+        "$aas#submodels",
+        "$aas#submodels[]",
+        "$aas#submodels[0]",
+        "$aas#submodels[].keys",
+        "$aas#submodels[].keys[]",
+        "$aas#submodels[].keys[0]",
+        "$sm#semanticId",
+        "$sm#semanticId.keys",
+        "$sm#semanticId.keys[]",
+        "$sm#semanticId.keys[0]",
+        "$sm#supplementalSemanticIds",
+        "$sm#supplementalSemanticIds[]",
+        "$sm#supplementalSemanticIds[0]",
+        "$sm#supplementalSemanticIds[].keys",
+        "$sm#supplementalSemanticIds[].keys[]",
+        "$sm#supplementalSemanticIds[0].keys[0]",
+        "$sm#idShort",
+        "$sme",
+        "$sme.AddressInformation",
+        "$sme.AddressInformation[]",
+        "$sme.AddressInformation[0]",
+        "$sme.AddressInformation.Zipcode",
+        "$sme.AddressInformation[]#value",
+        "$sme.AddressInformation#semanticId",
+        "$sme.AddressInformation#semanticId.keys",
+        "$sme.AddressInformation#semanticId.keys[]",
+        "$sme.AddressInformation#supplementalSemanticIds",
+        "$sme.AddressInformation#supplementalSemanticIds[]",
+        "$sme.AddressInformation#supplementalSemanticIds[].keys",
+        "$sme.AddressInformation#supplementalSemanticIds[].keys[]",
+        "$sme#idShort",
+        "$sme#value",
+        "$sme#valueType",
+        "$sme#language",
+        "$cd#idShort",
+        "$aasdesc#idShort",
+        "$aasdesc#description",
+        "$aasdesc#displayName",
+        "$aasdesc#extension",
+        "$aasdesc#administration",
+        "$aasdesc#assetKind",
+        "$aasdesc#assetType",
+        "$aasdesc#globalAssetId",
+        "$aasdesc#specificAssetIds",
+        "$aasdesc#specificAssetIds[]",
+        "$aasdesc#specificAssetIds[].externalSubjectId.keys[]",
+        "$aasdesc#endpoints",
+        "$aasdesc#endpoints[]",
+        "$aasdesc#endpoints[0]",
+        "$aasdesc#submodelDescriptors",
+        "$aasdesc#submodelDescriptors[]",
+        "$aasdesc#submodelDescriptors[0]",
+        "$aasdesc#submodelDescriptors[].semanticId",
+        "$aasdesc#submodelDescriptors[].semanticId.keys[]",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[]",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[].keys",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[].keys[]",
+        "$aasdesc#submodelDescriptors[].idShort",
+        "$aasdesc#submodelDescriptors[].endpoints",
+        "$aasdesc#submodelDescriptors[].endpoints[]",
+        "$smdesc#semanticId",
+        "$smdesc#semanticId.keys",
+        "$smdesc#semanticId.keys[]",
+        "$smdesc#supplementalSemanticIds",
+        "$smdesc#supplementalSemanticIds[]",
+        "$smdesc#supplementalSemanticIds[].keys",
+        "$smdesc#supplementalSemanticIds[].keys[]",
+        "$smdesc#idShort",
+        "$smdesc#endpoints",
+        "$smdesc#endpoints[]",
+    ]
+
+    NOT_ALLOWED = [
+        "$aas#id",
+        "$aas#assetInformation.assetKind",
+        "$aas#assetInformation.specificAssetIds.name",
+        "$aas#assetInformation.specificAssetIds[01]",
+        "$aas#assetInformation.specificAssetIds[].name",
+        "$aas#assetInformation.specificAssetIds[].value",
+        "$aas#assetInformation.specificAssetIds.keys[]",
+        "$aas#assetInformation.specificAssetIds.externalSubjectId.keys[]",
+        "$aas#submodels[01]",
+        "$aas#submodels.keys[]",
+        "$aas#submodels[].type",
+        "$aas#submodels[].keys[].value",
+        "$sm#semanticId.type",
+        "$sm#semanticId.keys[].value",
+        "$sm#id",
+        "$sm#supplementalSemanticIds[01]",
+        "$sm#supplementalSemanticIds.type",
+        "$sm#supplementalSemanticIds.keys",
+        "$sm#supplementalSemanticIds[].type",
+        "$sm#supplementalSemanticIds[].keys[].value",
+        "$sme.1Invalid",
+        "$sme.AddressInformation[01]",
+        "$sme.AddressInformation#id",
+        "$sme.AddressInformation#bogus",
+        "$sme.AddressInformation#semanticId.type",
+        "$sme.AddressInformation#semanticId.keys[].value",
+        "$sme.AddressInformation#supplementalSemanticIds[01]",
+        "$sme.AddressInformation#supplementalSemanticIds.type",
+        "$sme.AddressInformation#supplementalSemanticIds.keys",
+        "$sme.AddressInformation#supplementalSemanticIds[].keys[].value",
+        "$cd#id",
+        "$aasdesc#id",
+        "$aasdesc#specificAssetIds.name",
+        "$aasdesc#specificAssetIds[01]",
+        "$aasdesc#specificAssetIds[].name",
+        "$aasdesc#endpoints[01]",
+        "$aasdesc#endpoints.protocolinformation.href",
+        "$aasdesc#submodelDescriptors[01]",
+        "$aasdesc#submodelDescriptors.endpoints[]",
+        "$aasdesc#submodelDescriptors[].id",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[01]",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds.type",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds.keys",
+        "$aasdesc#submodelDescriptors[].supplementalSemanticIds[].keys[].value",
+        "$aasdesc#submodelDescriptors[].endpoints.protocolinformation.href",
+        "$smdesc#id",
+        "$smdesc#supplementalSemanticIds[01]",
+        "$smdesc#supplementalSemanticIds.type",
+        "$smdesc#supplementalSemanticIds.keys",
+        "$smdesc#supplementalSemanticIds[].keys[].value",
+        "$smdesc#endpoints[01]",
+        "$smdesc#endpoints.protocolinformation.href",
+    ]
+
+    def test_allowed(self) -> None:
+        for text in Test_matches_fragment_field_identifier.ALLOWED:
+            with self.subTest(text=text):
+                assert v3_2.matches_fragment_field_identifier(text)
+
+    def test_not_allowed(self) -> None:
+        for text in Test_matches_fragment_field_identifier.NOT_ALLOWED:
+            with self.subTest(text=text):
+                assert not v3_2.matches_fragment_field_identifier(text)
+
+
+class Test_matches_reference_identifier(unittest.TestCase):
+    # NOTE (mristin):
+    # The cases are taken over from the test suite of the specification,
+    # see:
+    # https://github.com/admin-shell-io/aas-specs-api/blob/main/documentation/IDTA-01002-3/modules/ROOT/pages/http-rest-api/test/query/test_field_identifier_regex.py
+    ALLOWED = [
+        '$aas("aas-id")#assetInformation.specificAssetIds[].externalSubjectId.keys[0].value',
+        '$sm("SubmodelID")#id',
+        '$sm("SubmodelID")#supplementalSemanticIds[].keys[].value',
+        '$cd("ConceptDescriptionID")#idShort',
+        '$sme("SubmodelID-OperationalData").machineState#value',
+        '$sme("SubmodelID").AddressInformation[0].Zipcode#semanticId.keys[].value',
+    ]
+
+    NOT_ALLOWED = [
+        "$sm#id",
+        '$sm("SubmodelID")#bogus',
+        '$sm("SubmodelID")#supplementalSemanticIds[01]',
+        '$aas("aas-id")#assetInformation.specificAssetIds[]',
+        '$cd("ConceptDescriptionID")#description',
+        '$sme("SubmodelID").machineState',
+        '$sme("SubmodelID").machineState#id',
+        '$sme("SubmodelID").1Invalid#value',
+        '$aasdesc("aas-id")#idShort',
+    ]
+
+    def test_allowed(self) -> None:
+        for text in Test_matches_reference_identifier.ALLOWED:
+            with self.subTest(text=text):
+                assert v3_2.matches_reference_identifier(text)
+
+    def test_not_allowed(self) -> None:
+        for text in Test_matches_reference_identifier.NOT_ALLOWED:
+            with self.subTest(text=text):
+                assert not v3_2.matches_reference_identifier(text)
+
+    def test_escaped_quotation_mark_and_reverse_solidus(self) -> None:
+        assert v3_2.matches_reference_identifier('$cd("a\\"b\\\\c")#id')
+
+    def test_unescaped_reverse_solidus(self) -> None:
+        assert not v3_2.matches_reference_identifier('$cd("a\\b")#id')
+
+    def test_empty_identifier(self) -> None:
+        assert not v3_2.matches_reference_identifier('$cd("")#id')
+
+
+class Test_comparability(unittest.TestCase):
+    FIELD = v3_2.Field_operand(v3_2.Field_identifier("$sme#value"))
+    STRING = v3_2.String_literal(v3_2.Standard_string("something"))
+    NUMBER = v3_2.Number_literal(1.0)
+    HEX = v3_2.Hex_literal(v3_2.Hex_literal_type("16#1F"))
+    BOOLEAN = v3_2.Boolean_literal(True)
+    DATE_TIME = v3_2.Date_time_literal(
+        v3_2.Date_time_literal_type("2024-02-29T12:00:00Z")
+    )
+    TIME = v3_2.Time_literal(v3_2.Time_literal_type("12:00"))
+    UTC_NOW = v3_2.Attribute_operand(
+        v3_2.Global_attribute(v3_2.Global_attribute_kind.UTC_now)
+    )
+    ANONYMOUS = v3_2.Attribute_operand(
+        v3_2.Global_attribute(v3_2.Global_attribute_kind.Anonymous)
+    )
+
+    def test_same_types_are_equality_comparable(self) -> None:
+        for value in [
+            Test_comparability.STRING,
+            Test_comparability.NUMBER,
+            Test_comparability.HEX,
+            Test_comparability.BOOLEAN,
+            Test_comparability.DATE_TIME,
+            Test_comparability.TIME,
+        ]:
+            with self.subTest(value=value):
+                assert v3_2.are_equality_comparable(value, value)
+                assert v3_2.are_equality_comparable(Test_comparability.FIELD, value)
+                assert v3_2.are_equality_comparable(value, Test_comparability.FIELD)
+
+    def test_two_fields_are_comparable(self) -> None:
+        assert v3_2.are_equality_comparable(
+            Test_comparability.FIELD, Test_comparability.FIELD
+        )
+        assert v3_2.are_order_comparable(
+            Test_comparability.FIELD, Test_comparability.FIELD
+        )
+
+    def test_different_types_are_not_comparable(self) -> None:
+        assert not v3_2.are_equality_comparable(
+            Test_comparability.NUMBER, Test_comparability.STRING
+        )
+        assert not v3_2.are_equality_comparable(
+            Test_comparability.DATE_TIME, Test_comparability.TIME
+        )
+        assert not v3_2.are_order_comparable(
+            Test_comparability.HEX, Test_comparability.NUMBER
+        )
+
+    def test_booleans_are_not_order_comparable(self) -> None:
+        assert not v3_2.are_order_comparable(
+            Test_comparability.BOOLEAN, Test_comparability.BOOLEAN
+        )
+        assert not v3_2.are_order_comparable(
+            Test_comparability.FIELD, Test_comparability.BOOLEAN
+        )
+
+    def test_date_time_global_attribute_is_string_and_date_time(self) -> None:
+        assert v3_2.are_order_comparable(
+            Test_comparability.UTC_NOW, Test_comparability.DATE_TIME
+        )
+        assert v3_2.are_equality_comparable(
+            Test_comparability.UTC_NOW, Test_comparability.STRING
+        )
+        assert not v3_2.are_equality_comparable(
+            Test_comparability.ANONYMOUS, Test_comparability.DATE_TIME
+        )
+
+    def test_invariant_of_a_comparison(self) -> None:
+        v3_2.Equal_comparison(eq=(Test_comparability.FIELD, Test_comparability.NUMBER))
+
+        with self.assertRaises(icontract.ViolationError):
+            v3_2.Greater_than_comparison(
+                gt=(Test_comparability.NUMBER, Test_comparability.STRING)
+            )
+
+
+class Test_matches_hex_literal(unittest.TestCase):
+    def test_valid(self) -> None:
+        assert v3_2.matches_hex_literal("16#0")
+        assert v3_2.matches_hex_literal("16#ABCDEF0123456789")
+
+    def test_empty_digits(self) -> None:
+        assert not v3_2.matches_hex_literal("16#")
+
+    def test_lowercase(self) -> None:
+        assert not v3_2.matches_hex_literal("16#abc")
+
+    def test_wrong_prefix(self) -> None:
+        assert not v3_2.matches_hex_literal("0x1F")
+
+
+class Test_matches_date_time_literal(unittest.TestCase):
+    def test_with_separator_and_zone(self) -> None:
+        assert v3_2.matches_date_time_literal("2024-02-29T12:00:00Z")
+
+    def test_without_separator_and_seconds(self) -> None:
+        assert v3_2.matches_date_time_literal("2024-01-3112:00")
+
+    def test_with_offset_and_fraction(self) -> None:
+        assert v3_2.matches_date_time_literal("2000-12-31T23:59:59.123+14:00")
+
+    def test_end_of_day(self) -> None:
+        assert v3_2.matches_date_time_literal("2000-01-01T24:00:00")
+
+    def test_leap_day_in_non_leap_year(self) -> None:
+        assert not v3_2.matches_date_time_literal("1900-02-29T12:00")
+
+    def test_invalid_day_of_month(self) -> None:
+        assert not v3_2.matches_date_time_literal("2023-04-31T12:00")
+
+    def test_date_only(self) -> None:
+        assert not v3_2.matches_date_time_literal("2023-04-30")
+
+    def test_invalid_offset(self) -> None:
+        assert not v3_2.matches_date_time_literal("2023-04-30T12:00+14:01")
+
+
+class Test_matches_time_literal(unittest.TestCase):
+    def test_without_seconds(self) -> None:
+        assert v3_2.matches_time_literal("12:00")
+
+    def test_with_fraction_and_zone(self) -> None:
+        assert v3_2.matches_time_literal("23:59:59.5Z")
+
+    def test_with_offset(self) -> None:
+        assert v3_2.matches_time_literal("12:00:00+01:00")
+
+    def test_end_of_day(self) -> None:
+        assert v3_2.matches_time_literal("24:00")
+
+    def test_after_end_of_day(self) -> None:
+        assert not v3_2.matches_time_literal("24:01")
+
+    def test_single_digit_hour(self) -> None:
+        assert not v3_2.matches_time_literal("1:00")
+
+
 class Test_v3_2_runtime_behavior(unittest.TestCase):
     @staticmethod
     def _make_template_qualifier() -> v3_2.Qualifier:
@@ -1167,6 +1668,33 @@ _META_MODEL: tests.common.MetaModel = tests.common.load_meta_model(
 )
 
 
+def _synthetic_referable_class_names(
+    symbol_table: intermediate.SymbolTable,
+) -> Set[Identifier]:
+    """
+    Collect names of classes which are API-only, alternate serializations of
+    the "real" model elements (the ``*_metadata`` classes and their common
+    abstract base, ``Submodel_element_attributes``).
+
+    These are deliberately *not* part of :class:`Key_types`, and,
+    consequently, of the ``AAS_*`` constant sets, even though they inherit
+    from ``Referable``/``Identifiable`` for field reuse.
+    """
+    result = set()  # type: Set[Identifier]
+    for our_type in symbol_table.our_types:
+        if not isinstance(
+            our_type, (intermediate.AbstractClass, intermediate.ConcreteClass)
+        ):
+            continue
+
+        if our_type.name.endswith("_metadata") or our_type.name == Identifier(
+            "Submodel_element_attributes"
+        ):
+            result.add(our_type.name)
+
+    return result
+
+
 class Test_assertions(unittest.TestCase):
     # NOTE (mristin):
     # We do not state "ID" as an abbreviation (which might imply "Identity Document"),
@@ -1175,7 +1703,9 @@ class Test_assertions(unittest.TestCase):
     # See: https://english.stackexchange.com/questions/101248/how-should-the-abbreviation-for-identifier-be-capitalized
     LOWER_TO_ABBREVIATION = {
         "aas": "AAS",
+        "aasx": "AASX",
         "bcp": "BCP",
+        "did": "DID",
         "din": "DIN",
         "ece": "ECE",
         "html": "HTML",
@@ -1184,13 +1714,18 @@ class Test_assertions(unittest.TestCase):
         "iec": "IEC",
         "irdi": "IRDI",
         "iri": "IRI",
+        "json": "JSON",
         "mime": "MIME",
         "nist": "NIST",
         "rfc": "RFC",
         "si": "SI",
+        "ssp": "SSP",
+        "tlsa": "TLSA",
         "uri": "URI",
         "url": "URL",
         "utc": "UTC",
+        "v3": "V3",
+        "w3c": "W3C",
         "xml": "XML",
         "xsd": "XSD",
     }
@@ -1382,6 +1917,7 @@ class Test_assertions(unittest.TestCase):
 
         return isinstance(type_anno, intermediate.ListTypeAnnotation) and not (
             isinstance(type_anno.items, intermediate.OurTypeAnnotation)
+            and isinstance(type_anno.items.our_type, intermediate.Class)
             and type_anno.items.our_type.is_subclass_of(lang_string_cls)
         )
 
@@ -1393,6 +1929,34 @@ class Test_assertions(unittest.TestCase):
             "Submodel_element_collection.value",
             "Submodel_element_list.value",
             "Extension.refers_to",
+            # NOTE (mristin):
+            # The official HTTP/REST API OpenAPI schema mandates the JSON key
+            # "endpointProtocolVersion" (singular) even though it is an
+            # array, so we keep the property singular to match the wire
+            # format exactly.
+            "Protocol_information.endpoint_protocol_version",
+            # NOTE (mristin):
+            # ``result`` is the property name mandated by the official
+            # HTTP/REST API OpenAPI schema for all the paged envelopes below
+            # (see the "GetXxxResult Envelopes" region), so we keep it
+            # singular to match the JSON wire format exactly instead of
+            # renaming it to ``results``.
+            "Paged_result.result",
+            "Get_asset_administration_shells_result.result",
+            "Get_asset_administration_shells_metadata_result.result",
+            "Get_all_asset_administration_shells_recent_changes_result.result",
+            "Get_asset_administration_shell_descriptors_result.result",
+            "Get_concept_descriptions_result.result",
+            "Get_all_concept_descriptions_recent_changes_result.result",
+            "Get_package_descriptions_result.result",
+            "Get_path_items_result.result",
+            "Get_references_result.result",
+            "Get_submodel_descriptors_result.result",
+            "Get_submodel_elements_metadata_result.result",
+            "Get_submodel_elements_result.result",
+            "Get_all_submodels_recent_changes_result.result",
+            "Get_submodels_metadata_result.result",
+            "Get_submodels_result.result",
         }
 
         symbol_table = _META_MODEL.symbol_table
@@ -1434,6 +1998,11 @@ class Test_assertions(unittest.TestCase):
                 for method in our_type.methods:
                     errors.extend(Test_assertions.check_method_name(method.name))
 
+            elif isinstance(our_type, intermediate.NamedUnion):
+                # NOTE (mristin):
+                # There are no names to be checked beneath the named union.
+                pass
+
             else:
                 aas_core_codegen.common.assert_never(our_type)
 
@@ -1461,6 +2030,7 @@ class Test_assertions(unittest.TestCase):
             symbol_table=symbol_table,
             cls=identifiable_cls,
             enumeration_or_set=aas_identifiables_set,
+            exclude_names=_synthetic_referable_class_names(symbol_table),
         )
 
     def test_AAS_submodel_elements_as_keys_corresponds_to_classes(self) -> None:
@@ -1500,6 +2070,8 @@ class Test_assertions(unittest.TestCase):
             aas_core_codegen.common.Identifier("Referable")
         )
 
+        synthetic_referable_class_names = _synthetic_referable_class_names(symbol_table)
+
         for our_type in symbol_table.our_types:
             if not isinstance(
                 our_type, (intermediate.AbstractClass, intermediate.ConcreteClass)
@@ -1507,6 +2079,9 @@ class Test_assertions(unittest.TestCase):
                 continue
 
             if our_type in (referable_cls, identifiable_cls):
+                continue
+
+            if our_type.name in synthetic_referable_class_names:
                 continue
 
             if our_type.is_subclass_of(referable_cls) and not our_type.is_subclass_of(
@@ -1558,6 +2133,7 @@ Observed literals: {sorted(literal_set)!r}""")
             symbol_table=symbol_table,
             cls=referable_cls,
             enumeration_or_set=aas_submodel_elements_as_keys_set,
+            exclude_names=_synthetic_referable_class_names(symbol_table),
         )
 
     def test_AAS_submodel_elements_corresponds_to_classes(self) -> None:
@@ -1877,6 +2453,7 @@ Observed literals: {sorted(literal_set)!r}""")
                 if (
                     isinstance(type_anno, intermediate.ListTypeAnnotation)
                     and isinstance(type_anno.items, intermediate.OurTypeAnnotation)
+                    and isinstance(type_anno.items.our_type, intermediate.Class)
                     and type_anno.items.our_type.is_subclass_of(
                         abstract_lang_string_cls
                     )
@@ -1915,6 +2492,10 @@ Observed literals: {sorted(literal_set)!r}""")
             aas_core_codegen.common.Identifier("Submodel_element")
         )
 
+        submodel_element_metadata_cls = symbol_table.must_find_class(
+            aas_core_codegen.common.Identifier("Submodel_element_metadata")
+        )
+
         errors = []  # type: List[str]
 
         for our_type in symbol_table.our_types_topologically_sorted:
@@ -1934,6 +2515,18 @@ Observed literals: {sorted(literal_set)!r}""")
             # ``Submodel_element`` inherits from it, and the submodel elements can be
             # in the value of ``Submodel_element_list``.
             if id(submodel_element_cls) in our_type.descendant_id_set:
+                continue
+
+            # NOTE (mristin):
+            # ``Submodel_element_metadata`` and its descendants mirror
+            # ``Submodel_element`` (metadata-only view of the very same elements,
+            # kept as a deliberately separate hierarchy -- see the note on
+            # ``Submodel_element_metadata``). The same "can be in the value of
+            # a Submodel_element_list" exception applies to them.
+            if our_type.is_subclass_of(submodel_element_metadata_cls):
+                continue
+
+            if id(submodel_element_metadata_cls) in our_type.descendant_id_set:
                 continue
 
             # NOTE (mristin):
@@ -2097,15 +2690,19 @@ Observed literals: {sorted(literal_set)!r}""")
                 if not isinstance(type_anno, intermediate.ListTypeAnnotation):
                     continue
 
-                assert isinstance(
-                    type_anno.items, intermediate.OurTypeAnnotation
-                ) and isinstance(
-                    type_anno.items.our_type,
-                    (intermediate.AbstractClass, intermediate.ConcreteClass),
-                ), (
-                    f"Expected only lists of class instances, "
-                    f"but got: {type_anno.items}"
-                )
+                if not (
+                    isinstance(type_anno.items, intermediate.OurTypeAnnotation)
+                    and isinstance(
+                        type_anno.items.our_type,
+                        (intermediate.AbstractClass, intermediate.ConcreteClass),
+                    )
+                ):
+                    # NOTE (mristin):
+                    # The list is not of class instances (*e.g.*, a list of
+                    # a constrained primitive or of an enumeration literal), so
+                    # Constraint AASd-117 (which is only about Referable ID-shorts)
+                    # does not apply.
+                    continue
 
                 # NOTE (mristin):
                 # All Referable classes already have to define the constraint as
@@ -2192,6 +2789,591 @@ Observed literals: {sorted(literal_set)!r}""")
                         f"The invariant description in class {our_type.name!r} "
                         f"must end with a dot: "
                         f"{invariant.description!r}"
+                    )
+
+        if len(errors) > 0:
+            errors_joined = "\n".join(tests.common.make_bullet_points(errors))
+            raise AssertionError(f"One or more errors:\n{errors_joined}")
+
+    def test_metadata_classes_exclude_only_the_value_related_properties(
+        self,
+    ) -> None:
+        """
+        Assert that every ``*_metadata`` class in the "Metadata And Value
+        Views" region carries exactly the properties of its Part 1
+        counterpart, minus the value-related properties it deliberately
+        excludes, and that every property it does carry has *exactly* the
+        same type as on the Part 1 counterpart (a ``*_metadata`` class only
+        ever drops properties -- it never changes the type or the
+        optionality of the ones it keeps).
+
+        This keeps Part 1 and Part 2 in sync: if a property is added,
+        renamed, removed or re-typed on the Part 1 class, this test will
+        fail until the corresponding ``*_metadata`` class is updated to
+        match.
+        """
+        symbol_table = _META_MODEL.symbol_table
+
+        # fmt: off
+        # Map the metadata class name to
+        # (the Part 1 class name, the excluded property names)
+        cases = [
+            ("Property_metadata", "Property", {"value", "value_ID"}),
+            ("Range_metadata", "Range", {"min", "max"}),
+            ("Blob_metadata", "Blob", {"value", "content_type"}),
+            ("File_metadata", "File", {"value", "content_type"}),
+            (
+                "Multi_language_property_metadata",
+                "Multi_language_property",
+                {"value", "value_ID"},
+            ),
+            ("Reference_element_metadata", "Reference_element", {"value"}),
+            (
+                "Relationship_element_metadata",
+                "Relationship_element",
+                {"first", "second"},
+            ),
+            (
+                "Annotated_relationship_element_metadata",
+                "Annotated_relationship_element",
+                {"first", "second", "annotations"},
+            ),
+            (
+                "Entity_metadata",
+                "Entity",
+                {
+                    "statements",
+                    "entity_type",
+                    "global_asset_ID",
+                    "specific_asset_IDs",
+                },
+            ),
+            ("Capability_metadata", "Capability", set()),
+            (
+                "Operation_metadata",
+                "Operation",
+                {"input_variables", "output_variables", "inoutput_variables"},
+            ),
+            (
+                "Submodel_element_collection_metadata",
+                "Submodel_element_collection",
+                {"value"},
+            ),
+            (
+                "Submodel_element_list_metadata",
+                "Submodel_element_list",
+                {"value"},
+            ),
+            (
+                "Basic_event_element_metadata",
+                "Basic_event_element",
+                {"observed"},
+            ),
+            ("Submodel_metadata", "Submodel", {"submodel_elements"}),
+            (
+                "Asset_administration_shell_metadata",
+                "Asset_administration_shell",
+                {"asset_information", "submodels"},
+            ),
+        ]
+        # fmt: on
+
+        errors = []  # type: List[str]
+
+        for metadata_cls_name, full_cls_name, expected_excluded in cases:
+            metadata_cls = symbol_table.must_find_class(
+                aas_core_codegen.common.Identifier(metadata_cls_name)
+            )
+            full_cls = symbol_table.must_find_class(
+                aas_core_codegen.common.Identifier(full_cls_name)
+            )
+
+            metadata_prop_names = set(metadata_cls.properties_by_name.keys())
+            full_prop_names = set(full_cls.properties_by_name.keys())
+
+            # NOTE (mristin):
+            # This is a sanity-check that the excluded properties actually exist on the
+            # full class; otherwise the exclusion set itself is stale.
+            stale_exclusions = expected_excluded - full_prop_names
+            if stale_exclusions:
+                errors.append(
+                    f"The excluded properties {sorted(stale_exclusions)!r} for "
+                    f"{metadata_cls_name} no longer exist on {full_cls_name}; "
+                    f"update the exclusion set in this test."
+                )
+                continue
+
+            expected_metadata_prop_names = full_prop_names - expected_excluded
+
+            missing = expected_metadata_prop_names - metadata_prop_names
+            unexpected = metadata_prop_names - expected_metadata_prop_names
+
+            if missing:
+                errors.append(
+                    f"{metadata_cls_name} is missing the propert(y/ies) present "
+                    f"on {full_cls_name} and not in the excluded set: "
+                    f"{sorted(missing)!r}"
+                )
+
+            if unexpected:
+                errors.append(
+                    f"{metadata_cls_name} has the unexpected propert(y/ies), not "
+                    f"present on {full_cls_name} after excluding "
+                    f"{sorted(expected_excluded)!r}: {sorted(unexpected)!r}"
+                )
+
+            # NOTE (mristin):
+            # The retained properties must coincide in type (including
+            # Optional-ness) with their Part 1 counterparts. This is exactly what
+            # structural subtyping checks: every property of ``metadata_cls`` must
+            # be matched on ``full_cls`` by a same-named property of the exact same
+            # type.
+            if (
+                not missing
+                and not unexpected
+                and not full_cls.is_structural_subtype_of(metadata_cls)
+            ):
+                errors.append(
+                    f"One or more of the propert(y/ies) shared between "
+                    f"{metadata_cls_name} and {full_cls_name} do not coincide in "
+                    f"type (including Optional-ness)."
+                )
+
+        if len(errors) > 0:
+            errors_joined = "\n".join(tests.common.make_bullet_points(errors))
+            raise AssertionError(f"One or more errors:\n{errors_joined}")
+
+    def test_reference_element_value_mirrors_all_properties_of_reference(
+        self,
+    ) -> None:
+        """
+        Assert that ``Reference_element_value`` carries exactly the same
+        properties as ``Reference``, each with exactly the same type.
+
+        Unlike the ``*_metadata`` classes, ``Reference_element_value`` does
+        not exclude any property: the Part 2 types ``ReferenceElementValue`` as
+        a direct alias of ``Reference``, not an object wrapping one, so it must mirror
+        *all* of ``Reference``'s properties. This keeps Part 1 and Part 2 in sync: if
+        a property is added, renamed, removed or re-typed on ``Reference``, this test
+        will fail until ``Reference_element_value`` is updated to match.
+        """
+        symbol_table = _META_MODEL.symbol_table
+
+        reference_cls = symbol_table.must_find_class(
+            aas_core_codegen.common.Identifier("Reference")
+        )
+        reference_element_value_cls = symbol_table.must_find_class(
+            aas_core_codegen.common.Identifier("Reference_element_value")
+        )
+
+        # NOTE (mristin):
+        # Two classes carry exactly the same properties, each with exactly the
+        # same type, if and only if each is a structural subtype of the other.
+        self.assertTrue(
+            reference_element_value_cls.is_structural_subtype_of(reference_cls),
+            "Reference_element_value is missing a propert(y/ies) present on "
+            "Reference, or one of its shared properties is mistyped.",
+        )
+        self.assertTrue(
+            reference_cls.is_structural_subtype_of(reference_element_value_cls),
+            "Reference_element_value has (an) unexpected propert(y/ies), not "
+            "present on Reference.",
+        )
+
+    def test_every_submodel_element_subclass_has_a_metadata_class(self) -> None:
+        """
+        Assert that every concrete subclass of ``Submodel_element`` in Part 1
+        has a corresponding ``<ClassName>_metadata`` class in the "Metadata
+        And Value Views" region.
+
+        This keeps Part 1 and Part 2 in sync: if a new submodel element type
+        is added to Part 1, this test will fail until a ``*_metadata`` class
+        is added for it too.
+        """
+        symbol_table = _META_MODEL.symbol_table
+
+        submodel_element_cls = symbol_table.must_find_class(
+            aas_core_codegen.common.Identifier("Submodel_element")
+        )
+
+        errors = []  # type: List[str]
+
+        for our_type in symbol_table.our_types:
+            if not isinstance(our_type, intermediate.ConcreteClass):
+                continue
+
+            if our_type is submodel_element_cls:
+                continue
+
+            if not our_type.is_subclass_of(submodel_element_cls):
+                continue
+
+            expected_metadata_cls_name = aas_core_codegen.common.Identifier(
+                f"{our_type.name}_metadata"
+            )
+
+            if symbol_table.find_our_type(expected_metadata_cls_name) is None:
+                errors.append(
+                    f"No {expected_metadata_cls_name!r} class found for the "
+                    f"submodel element {our_type.name!r}"
+                )
+
+        if len(errors) > 0:
+            errors_joined = "\n".join(tests.common.make_bullet_points(errors))
+            raise AssertionError(f"One or more errors:\n{errors_joined}")
+
+    def test_every_submodel_element_subclass_has_a_value_class_or_is_exempted(
+        self,
+    ) -> None:
+        """
+        Assert that every concrete subclass of ``Submodel_element`` in Part 1
+        either has a corresponding ``<ClassName>_value`` class in the
+        "Metadata And Value Views" region, or is explicitly exempted below
+        with a reason.
+
+        This keeps Part 1 and Part 2 in sync: if a new submodel element type
+        is added to Part 1, this test will fail until either a ``*_value``
+        class is added for it, or it is added to the exemptions with a
+        reason (*e.g.*, because its value is ValueOnly-shaped/dynamic, or it
+        has no value at all).
+        """
+        symbol_table = _META_MODEL.symbol_table
+
+        submodel_element_cls = symbol_table.must_find_class(
+            aas_core_codegen.common.Identifier("Submodel_element")
+        )
+
+        # fmt: off
+        # Map the Part 1 class name to the reason why it has no *_value class.
+        exemptions = {
+            "Property": (
+                "PropertyValue is a raw JSON string, number or boolean, not "
+                "an object."
+            ),
+            "Multi_language_property": (
+                "MultiLanguagePropertyValue is a bare JSON array of "
+                "single-entry objects, not an object with fixed attributes."
+            ),
+            "Capability": "Capability has no value at all; no Value schema exists.",
+            "Operation": (
+                "Operation has no simple value; invocation uses "
+                "OperationRequest/OperationResult instead. No Value schema "
+                "exists."
+            ),
+            "Submodel_element_collection": (
+                "SubmodelElementCollectionValue is ValueOnly-shaped JSON, "
+                "an open JSON object with no fixed attributes."
+            ),
+            "Submodel_element_list": (
+                "SubmodelElementListValue is a bare JSON array, not an "
+                "object."
+            ),
+        }
+        # fmt: on
+
+        errors = []  # type: List[str]
+
+        concrete_submodel_element_names = set()  # type: Set[str]
+
+        for our_type in symbol_table.our_types:
+            if not isinstance(our_type, intermediate.ConcreteClass):
+                continue
+
+            if our_type is submodel_element_cls:
+                continue
+
+            if not our_type.is_subclass_of(submodel_element_cls):
+                continue
+
+            concrete_submodel_element_names.add(our_type.name)
+
+            expected_value_cls_name = aas_core_codegen.common.Identifier(
+                f"{our_type.name}_value"
+            )
+            value_cls_exists = (
+                symbol_table.find_our_type(expected_value_cls_name) is not None
+            )
+            is_exempted = our_type.name in exemptions
+
+            if value_cls_exists and is_exempted:
+                errors.append(
+                    f"{our_type.name!r} has both a {expected_value_cls_name!r} "
+                    f"class *and* an exemption entry; remove one of the two."
+                )
+            elif not value_cls_exists and not is_exempted:
+                errors.append(
+                    f"No {expected_value_cls_name!r} class found for the "
+                    f"submodel element {our_type.name!r}, and it is not "
+                    f"exempted either."
+                )
+
+        # NOTE (mristin):
+        # Sanity-check that the exemptions do not refer to stale/renamed
+        # submodel element classes.
+        stale_exemptions = set(exemptions.keys()) - concrete_submodel_element_names
+        if stale_exemptions:
+            errors.append(
+                f"The exemptions refer to classes which are no longer "
+                f"concrete subclasses of Submodel_element: "
+                f"{sorted(stale_exemptions)!r}"
+            )
+
+        if len(errors) > 0:
+            errors_joined = "\n".join(tests.common.make_bullet_points(errors))
+            raise AssertionError(f"One or more errors:\n{errors_joined}")
+
+    def test_operation_request_async_has_the_expected_fields(self) -> None:
+        """
+        Assert that ``Operation_request_async`` has exactly the same fields
+        as ``Operation_request`` -- ``input_arguments`` and
+        ``inoutput_arguments`` with coinciding types, and
+        ``client_timeout_duration`` present on both, but required (not
+        ``Optional``) on ``Operation_request_async``.
+
+        ``Operation_request_async`` is deliberately *not* a subclass of
+        ``Operation_request`` (see the note on the class itself), so nothing
+        keeps the two in sync automatically; this test is what does. If a
+        field is added, renamed, removed or re-typed on ``Operation_request``,
+        this test will fail until ``Operation_request_async`` is updated to
+        match.
+        """
+        symbol_table = _META_MODEL.symbol_table
+
+        operation_request_cls = symbol_table.must_find_class(
+            aas_core_codegen.common.Identifier("Operation_request")
+        )
+        operation_request_async_cls = symbol_table.must_find_class(
+            aas_core_codegen.common.Identifier("Operation_request_async")
+        )
+
+        operation_request_prop_names = set(
+            operation_request_cls.properties_by_name.keys()
+        )
+        operation_request_async_prop_names = set(
+            operation_request_async_cls.properties_by_name.keys()
+        )
+
+        errors = []  # type: List[str]
+
+        missing = operation_request_prop_names - operation_request_async_prop_names
+        unexpected = operation_request_async_prop_names - operation_request_prop_names
+
+        if missing:
+            errors.append(
+                f"Operation_request_async is missing the propert(y/ies) "
+                f"present on Operation_request: {sorted(missing)!r}"
+            )
+
+        if unexpected:
+            errors.append(
+                f"Operation_request_async has the unexpected propert(y/ies), "
+                f"not present on Operation_request: {sorted(unexpected)!r}"
+            )
+
+        # NOTE (mristin):
+        # client_timeout_duration is expected to differ: required (not
+        # Optional) on Operation_request_async, Optional on Operation_request.
+        # This is the one property that keeps the two classes from being
+        # structural subtypes of each other (``Class.is_structural_subtype_of``
+        # is invariant in Optional-ness), so we special-case it here and
+        # compare the rest with ``intermediate.type_annotations_equal``.
+        if not missing and not unexpected:
+            client_timeout_duration_request = operation_request_cls.properties_by_name[
+                "client_timeout_duration"
+            ]
+            client_timeout_duration_async = (
+                operation_request_async_cls.properties_by_name[
+                    "client_timeout_duration"
+                ]
+            )
+
+            if isinstance(
+                client_timeout_duration_async.type_annotation,
+                intermediate.OptionalTypeAnnotation,
+            ) or not intermediate.type_annotations_equal(
+                intermediate.beneath_optional(
+                    client_timeout_duration_request.type_annotation
+                ),
+                client_timeout_duration_async.type_annotation,
+            ):
+                errors.append(
+                    "Operation_request_async.client_timeout_duration is "
+                    "expected to be the required (non-Optional) form of "
+                    "Operation_request.client_timeout_duration, but it is not."
+                )
+
+            for prop_name in sorted(
+                operation_request_prop_names - {"client_timeout_duration"}
+            ):
+                request_prop = operation_request_cls.properties_by_name[prop_name]
+                async_prop = operation_request_async_cls.properties_by_name[prop_name]
+
+                if not intermediate.type_annotations_equal(
+                    request_prop.type_annotation, async_prop.type_annotation
+                ):
+                    errors.append(
+                        f"Operation_request_async.{prop_name} is typed "
+                        f"{async_prop.type_annotation}, but "
+                        f"Operation_request.{prop_name} is typed "
+                        f"{request_prop.type_annotation}; the types (including "
+                        f"Optional-ness) must coincide."
+                    )
+
+        if len(errors) > 0:
+            errors_joined = "\n".join(tests.common.make_bullet_points(errors))
+            raise AssertionError(f"One or more errors:\n{errors_joined}")
+
+    def test_result_base_operation_result_operation_result_share_coinciding_fields(
+        self,
+    ) -> None:
+        """
+        Assert that the fields shared among ``Result``, ``Base_operation_result``
+        and ``Operation_result`` coincide in type wherever they overlap.
+
+        These three classes are deliberately *not* related by inheritance
+        (see the note on ``Base_operation_result``): aas-core-codegen
+        refuses to generate a schema for a concrete class with concrete
+        descendants unless it is marked
+        ``@serialization(with_model_type=True)``, which would introduce a
+        ``modelType`` discriminator that the official schema does not have
+        for this hierarchy. Flattening avoids that mismatch, but it means
+        ``messages`` (all three classes) and ``execution_state``/``success``
+        (``Base_operation_result`` and ``Operation_result``) are duplicated
+        by hand. This test is what keeps those duplicates in sync: if one
+        copy is changed without the other, this test will fail.
+        """
+        symbol_table = _META_MODEL.symbol_table
+
+        class_names = ["Result", "Base_operation_result", "Operation_result"]
+        props_by_class = {
+            name: {
+                prop.name: str(prop.type_annotation)
+                for prop in symbol_table.must_find_class(
+                    aas_core_codegen.common.Identifier(name)
+                ).properties
+            }
+            for name in class_names
+        }
+
+        errors = []  # type: List[str]
+
+        for i, first_name in enumerate(class_names):
+            for second_name in class_names[i + 1 :]:
+                first_props = props_by_class[first_name]
+                second_props = props_by_class[second_name]
+
+                shared_prop_names = set(first_props.keys()) & set(second_props.keys())
+
+                for prop_name in sorted(shared_prop_names):
+                    first_type_str = first_props[prop_name]
+                    second_type_str = second_props[prop_name]
+
+                    if first_type_str != second_type_str:
+                        errors.append(
+                            f"{first_name}.{prop_name} is typed "
+                            f"{first_type_str!r}, but {second_name}.{prop_name} "
+                            f"is typed {second_type_str!r}; the types "
+                            f"(including Optional-ness) must coincide."
+                        )
+
+        if len(errors) > 0:
+            errors_joined = "\n".join(tests.common.make_bullet_points(errors))
+            raise AssertionError(f"One or more errors:\n{errors_joined}")
+
+    def test_get_xxx_result_envelopes_have_the_expected_fields(self) -> None:
+        """
+        Assert that every ``Get_*_result`` class in the "GetXxxResult
+        Envelopes" region has exactly ``paging_metadata`` (required, typed
+        ``Paging_metadata``) and ``result`` (``Optional[List[...]]`` of the
+        expected item type), and nothing else.
+
+        These classes are deliberately standalone (not related by
+        inheritance to ``Paged_result`` or to each other; see the note at
+        the top of the region), so nothing keeps their shape in sync
+        automatically. This test is what does: if a class is mistyped
+        (*e.g.*, a stale or misspelled item type) or gains/loses a field,
+        this test will fail.
+        """
+        symbol_table = _META_MODEL.symbol_table
+
+        # fmt: off
+        # Map the class name to the expected item type of its "result" list.
+        cases = [
+            (
+                "Get_all_asset_administration_shells_recent_changes_result",
+                "Asset_administration_shell_recent_change",
+            ),
+            (
+                "Get_all_concept_descriptions_recent_changes_result",
+                "Concept_description_recent_change",
+            ),
+            ("Get_all_submodels_recent_changes_result", "Submodel_recent_change"),
+            (
+                "Get_asset_administration_shell_descriptors_result",
+                "Asset_administration_shell_descriptor",
+            ),
+            (
+                "Get_asset_administration_shells_metadata_result",
+                "Asset_administration_shell_metadata",
+            ),
+            ("Get_asset_administration_shells_result", "Asset_administration_shell"),
+            ("Get_concept_descriptions_result", "Concept_description"),
+            ("Get_package_descriptions_result", "Package_description"),
+            ("Get_path_items_result", "Path_item"),
+            ("Get_references_result", "Reference"),
+            ("Get_submodel_descriptors_result", "Submodel_descriptor"),
+            ("Get_submodel_elements_metadata_result", "Submodel_element_metadata"),
+            ("Get_submodel_elements_result", "Submodel_element"),
+            ("Get_submodels_metadata_result", "Submodel_metadata"),
+            ("Get_submodels_result", "Submodel"),
+        ]
+        # fmt: on
+
+        errors = []  # type: List[str]
+
+        for cls_name, item_type_name in cases:
+            cls = symbol_table.must_find_class(
+                aas_core_codegen.common.Identifier(cls_name)
+            )
+
+            props_by_name = {prop.name: prop for prop in cls.properties}
+            prop_names = set(props_by_name.keys())
+
+            expected_prop_names = {"paging_metadata", "result"}
+
+            missing = expected_prop_names - prop_names
+            unexpected = prop_names - expected_prop_names
+
+            if missing:
+                errors.append(
+                    f"{cls_name} is missing the expected propert(y/ies): "
+                    f"{sorted(missing)!r}"
+                )
+
+            if unexpected:
+                errors.append(
+                    f"{cls_name} has the unexpected propert(y/ies): "
+                    f"{sorted(unexpected)!r}"
+                )
+
+            if "paging_metadata" in props_by_name:
+                paging_metadata_type_str = str(
+                    props_by_name["paging_metadata"].type_annotation
+                )
+                if paging_metadata_type_str != "Paging_metadata":
+                    errors.append(
+                        f"{cls_name}.paging_metadata is typed "
+                        f"{paging_metadata_type_str!r}, expected "
+                        f"'Paging_metadata' (required)."
+                    )
+
+            if "result" in props_by_name:
+                result_type_str = str(props_by_name["result"].type_annotation)
+                expected_result_type_str = f"Optional[List[{item_type_name}]]"
+                if result_type_str != expected_result_type_str:
+                    errors.append(
+                        f"{cls_name}.result is typed {result_type_str!r}, "
+                        f"expected {expected_result_type_str!r}."
                     )
 
         if len(errors) > 0:
