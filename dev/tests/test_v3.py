@@ -1081,6 +1081,10 @@ class Test_assertions(unittest.TestCase):
 
         return isinstance(type_anno, intermediate.ListTypeAnnotation) and not (
             isinstance(type_anno.items, intermediate.OurTypeAnnotation)
+            and isinstance(
+                type_anno.items.our_type,
+                (intermediate.AbstractClass, intermediate.ConcreteClass),
+            )
             and type_anno.items.our_type.is_subclass_of(lang_string_cls)
         )
 
@@ -1132,6 +1136,11 @@ class Test_assertions(unittest.TestCase):
 
                 for method in our_type.methods:
                     errors.extend(Test_assertions.check_method_name(method.name))
+
+            elif isinstance(our_type, intermediate.NamedUnion):
+                # NOTE (mristin):
+                # This meta-model defines no named unions.
+                pass
 
             else:
                 aas_core_codegen.common.assert_never(our_type)
@@ -1448,6 +1457,10 @@ Observed literals: {sorted(literal_set)!r}""")
                 if (
                     isinstance(type_anno, intermediate.ListTypeAnnotation)
                     and isinstance(type_anno.items, intermediate.OurTypeAnnotation)
+                    and isinstance(
+                        type_anno.items.our_type,
+                        (intermediate.AbstractClass, intermediate.ConcreteClass),
+                    )
                     and type_anno.items.our_type.is_subclass_of(
                         abstract_lang_string_cls
                     )

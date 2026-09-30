@@ -111,6 +111,19 @@ def constrained_primitive(identifier: Identifier) -> Identifier:
     return aas_core_codegen.naming.capitalized_camel_case(identifier)
 
 
+def named_union_name(identifier: Identifier) -> Identifier:
+    """
+    Generate a name for a named union based on its meta-model ``identifier``.
+
+    >>> named_union_name(Identifier("something"))
+    'Something'
+
+    >>> named_union_name(Identifier("something_to_URL"))
+    'SomethingToUrl'
+    """
+    return aas_core_codegen.naming.capitalized_camel_case(identifier)
+
+
 def constant_name(identifier: Identifier) -> Identifier:
     """
     Generate a name for a constant based on its meta-model ``identifier``.
@@ -146,6 +159,7 @@ def of(
         intermediate.Property,
         intermediate.Method,
         intermediate.ConstrainedPrimitive,
+        intermediate.NamedUnion,
         intermediate.Constant,
     ],
 ) -> Identifier:
@@ -170,6 +184,9 @@ def of(
 
     elif isinstance(something, intermediate.ConstrainedPrimitive):
         return constrained_primitive(something.name)
+
+    elif isinstance(something, intermediate.NamedUnion):
+        return named_union_name(something.name)
 
     elif isinstance(something, intermediate.Constant):
         return constant_name(something.name)

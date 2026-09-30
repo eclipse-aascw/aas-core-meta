@@ -217,6 +217,37 @@ class _ElementRenderer(intermediate_doc.DocutilsElementTransformer[_NodeUnion]):
             None,
         )
 
+    def transform_reference_to_method_in_doc(
+        self, element: intermediate_doc.ReferenceToMethod
+    ) -> Tuple[Optional[_NodeUnion], Optional[List[str]]]:
+        cls_name = htmlgen.naming.of(element.reference.cls)
+        method_name = htmlgen.naming.of(element.reference.method)
+
+        return (
+            _Element(
+                name="a",
+                attrs=collections.OrderedDict(
+                    [("href", f"{cls_name}.html#method-{method_name}")]
+                ),
+                children=_List(items=[_Text(f"{cls_name}.{method_name}")]),
+            ),
+            None,
+        )
+
+    def transform_reference_to_verification_function_in_doc(
+        self, element: intermediate_doc.ReferenceToVerificationFunction
+    ) -> Tuple[Optional[_NodeUnion], Optional[List[str]]]:
+        name = htmlgen.naming.of(element.verification)
+
+        return (
+            _Element(
+                name="a",
+                attrs=collections.OrderedDict([("href", f"{name}.html")]),
+                children=_List(items=[_Text(name)]),
+            ),
+            None,
+        )
+
     def transform_reference_to_argument_in_doc(
         self, element: intermediate_doc.ReferenceToArgument
     ) -> Tuple[Optional[_NodeUnion], Optional[List[str]]]:

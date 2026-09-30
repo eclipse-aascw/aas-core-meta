@@ -1,6 +1,7 @@
 """Define markers for the meta model to mark the functions and data structures."""
 
 from typing import (
+    AbstractSet,
     TypeVar,
     Type,
     Optional,
@@ -139,7 +140,7 @@ def constant_bytearray(
 def constant_set(
     values: Sequence[T],
     description: Optional[str] = None,
-    superset_of: Optional[Sequence[Set[T]]] = None,
+    superset_of: Optional[Sequence[AbstractSet[T]]] = None,
 ) -> Set[T]:
     """
     Define a constant set in the meta-model.
