@@ -12,12 +12,15 @@ from typing import (
     Union,
     Set,
     Sequence,
+    Dict,
+    Any,
 )
 
 import asttokens
 import pygments
 import pygments.formatters
 import pygments.lexers
+import pygments.token
 from aas_core_codegen import intermediate
 from aas_core_codegen.common import (
     Error,
@@ -1027,79 +1030,42 @@ class _Transpiler(
 assert all(op in _Transpiler._PYTHON_COMPARISON_MAP for op in parse_tree.Comparator)
 
 
-class _TranspilableVerificationTranspiler(_Transpiler):
-    """Transpile the body of a :class:`.TranspilableVerification`."""
+def _map_names_to_hrefs(symbol_table: intermediate.SymbolTable) -> Mapping[str, str]:
+    """Map the names from the meta-model to the pages which describe them."""
+    result = dict()  # type: Dict[str, str]
+    for our_type in symbol_table.our_types:
+        result[our_type.name] = f"{htmlgen.naming.of(our_type)}.html"
 
-    # fmt: off
-    @require(
-        lambda environment, verification:
-        all(
-            environment.find(arg.name) is not None
-            for arg in verification.arguments
-        ),
-        "All arguments defined in the environment"
-    )
-    # fmt: on
-    def __init__(
-        self,
-        type_map: Mapping[
-            parse_tree.Node, intermediate_type_inference.TypeAnnotationUnion
-        ],
-        environment: intermediate_type_inference.Environment,
-        symbol_table: intermediate.SymbolTable,
-        verification: intermediate.TranspilableVerification,
-    ) -> None:
-        """Initialize with the given values."""
-        htmlgen.transpilation._Transpiler.__init__(
-            self, type_map=type_map, environment=environment
-        )
+    for constant in symbol_table.constants:
+        result[constant.name] = f"{htmlgen.naming.of(constant)}.html"
 
-        self._symbol_table = symbol_table
+    for verification in symbol_table.verification_functions:
+        result[verification.name] = f"{htmlgen.naming.of(verification)}.html"
 
-        self._argument_name_set = frozenset(arg.name for arg in verification.arguments)
+    return result
 
-    def transform_name(
-        self, node: parse_tree.Name
-    ) -> Tuple[Optional[Stripped], Optional[Error]]:
-        if node.identifier in self._variable_name_set:
-            name = htmlgen.naming.variable_name(node.identifier)
-            return Stripped(f"<span class='nv'>{name}</span>"), None
 
-        if node.identifier in self._argument_name_set:
-            name = htmlgen.naming.argument_name(node.identifier)
-            return Stripped(f"<span class='nv'>{name}</span>"), None
+def _css_class_of(token_type: Any) -> str:
+    """Find the CSS class of the token as pygments defines it for its styles."""
+    while token_type not in pygments.token.STANDARD_TYPES:
+        token_type = token_type.parent
 
-        if node.identifier in self._symbol_table.constants_by_name:
-            name = htmlgen.naming.constant_name(node.identifier)
-            return Stripped(f"<span class='no'>{name}</span>"), None
-
-        if node.identifier in self._symbol_table.verification_functions_by_name:
-            name = htmlgen.naming.function_name(node.identifier)
-            return Stripped(f"<span class='nf'>{name}</span>"), None
-
-        our_type = self._symbol_table.find_our_type(name=node.identifier)
-        if isinstance(our_type, intermediate.Enumeration):
-            name = htmlgen.naming.enum_name(node.identifier)
-            return (
-                Stripped(f"<span class='nc'><a href='{name}.html'>{name}</a></span>"),
-                None,
-            )
-
-        return None, Error(
-            node.original_node,
-            f"We can not determine how to transpile the name {node.identifier!r} "
-            f"to HTML. We could not find it neither in the constants, nor in "
-            f"verification functions, nor as an enumeration. "
-            f"If you expect this name to be transpilable, please contact "
-            f"the developers.",
-        )
+    css_class: str = pygments.token.STANDARD_TYPES[token_type]
+    return css_class
 
 
 @require(lambda body: len(body) > 0)
 def highlight_body(
-    body: Sequence[parse_tree.Node], atok: asttokens.ASTTokens
+    body: Sequence[parse_tree.Node],
+    atok: asttokens.ASTTokens,
+    symbol_table: intermediate.SymbolTable,
 ) -> Stripped:
-    """Highlight the original source code of the ``body`` statements."""
+    """
+    Highlight the original source code of the ``body`` statements.
+
+    The names referring to our types, constants and verification functions are
+    linked to their pages.
+    """
     first_stmt = body[0].original_node
     last_stmt = body[-1].original_node
 
@@ -1111,85 +1077,59 @@ def highlight_body(
     line_start = atok.text.rfind("\n", 0, start) + 1
     code = textwrap.dedent(atok.text[line_start:end])
 
-    return Stripped(
-        pygments.highlight(
-            code, pygments.lexers.PythonLexer(), pygments.formatters.HtmlFormatter()
-        ).strip()
-    )
+    href_map = _map_names_to_hrefs(symbol_table)
+
+    parts = []  # type: List[str]
+    for token_type, value in pygments.lex(code, pygments.lexers.PythonLexer()):
+        content = html.escape(value)
+
+        href = href_map.get(value, None)
+        if token_type in pygments.token.Name and href is not None:
+            content = f"<a href='{href}'>{content}</a>"
+
+        css_class = _css_class_of(token_type)
+        if css_class != "":
+            content = f"<span class='{css_class}'>{content}</span>"
+
+        parts.append(content)
+
+    return _enclose_in_highlight_div_pre("".join(parts).strip())
 
 
-def transpile_body_of_verification(
+def render_body_of_verification(
     verification: Union[
         intermediate.TranspilableVerification,
         intermediate.PatternVerification,
         intermediate.ImplementationSpecificVerification,
     ],
     symbol_table: intermediate.SymbolTable,
-    base_environment: intermediate_type_inference.Environment,
     atok: asttokens.ASTTokens,
-) -> Tuple[Optional[Stripped], Optional[Error]]:
-    """Transpile a verification function to HTML."""
+) -> Stripped:
+    """Render the body of a verification function as HTML."""
     if isinstance(verification, intermediate.ImplementationSpecificVerification):
         # NOTE (mristin):
         # We can not parse the implementation specific verification, so we simply
         # return a comment.
-        return (
-            Stripped(
-                "<div><em>Code not available as this is implementation-specific.</em></div>"
-            ),
-            None,
+        return Stripped(
+            "<div><em>Code not available as this is implementation-specific.</em></div>"
         )
-    elif isinstance(verification, intermediate.PatternVerification):
+    elif isinstance(
+        verification,
+        (intermediate.PatternVerification, intermediate.TranspilableVerification),
+    ):
         # NOTE (mristin):
-        # We do not transpile the pattern verifications, since aas-core-codegen
-        # understands them directly and does not know the ``match`` function. Their
-        # bodies consist only of local string variables and the final ``match``,
-        # so there is nothing to link, and we simply highlight the original code.
-        return highlight_body(verification.parsed.body, atok), None
-    elif isinstance(verification, intermediate.TranspilableVerification):
-        pass
+        # We highlight the original code instead of transpiling it. This way, we
+        # do not have to re-implement every construct of the meta-model language
+        # in htmlgen, and the pattern verifications, whose ``match`` is not known
+        # to aas-core-codegen, are rendered as they are written.
+        if len(verification.parsed.body) == 0:
+            return Stripped("<span class='c'># No implementation specified</span>")
+
+        return highlight_body(verification.parsed.body, atok, symbol_table)
     else:
         assert_never(verification)
 
-    # fmt: off
-    type_inference, error = (
-        intermediate_type_inference.infer_for_verification(
-            verification=verification,
-            base_environment=base_environment
-        )
-    )
-    # fmt: on
-
-    if error is not None:
-        return None, error
-
-    assert type_inference is not None
-
-    transpiler = _TranspilableVerificationTranspiler(
-        type_map=type_inference.type_map,
-        environment=type_inference.environment_with_args,
-        symbol_table=symbol_table,
-        verification=verification,
-    )
-
-    body = []  # type: List[Stripped]
-    for node in verification.parsed.body:
-        stmt, error = transpiler.transform(node)
-        if error is not None:
-            return None, Error(
-                verification.parsed.node,
-                f"Failed to transpile the verification function {verification.name!r}",
-                [error],
-            )
-
-        assert stmt is not None
-        body.append(stmt)
-
-    if len(body) == 0:
-        return Stripped("<span class='c'># No implementation specified</span>"), None
-
-    code = Stripped("\n".join(body))
-    return Stripped(_enclose_in_highlight_div_pre(code)), None
+    raise AssertionError("Should not have gotten here")
 
 
 class _InvariantTranspiler(_Transpiler):

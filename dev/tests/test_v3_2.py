@@ -2,7 +2,6 @@
 
 import pathlib
 import unittest
-from unittest import mock
 from typing import List, Set, Optional, Tuple
 
 import aas_core_codegen.common
@@ -863,6 +862,317 @@ class Test_matches_xs_string(unittest.TestCase):
         assert not v3_2.matches_xs_string("\x00")
 
 
+class Test_is_xs_date(unittest.TestCase):
+    def test_pattern_mismatch(self) -> None:
+        assert not v3_2.is_xs_date("")
+        assert not v3_2.is_xs_date("2022-04-01T00:00:00")
+
+    def test_ordinary_date(self) -> None:
+        assert v3_2.is_xs_date("2022-04-01")
+        assert v3_2.is_xs_date("2022-04-01Z")
+        assert v3_2.is_xs_date("2022-04-01+14:00")
+
+    def test_day_beyond_month(self) -> None:
+        assert not v3_2.is_xs_date("2022-04-31")
+        assert v3_2.is_xs_date("2022-12-31")
+
+    def test_february_in_leap_years(self) -> None:
+        assert v3_2.is_xs_date("2020-02-29")
+        assert v3_2.is_xs_date("2000-02-29")
+        assert not v3_2.is_xs_date("1900-02-29")
+        assert not v3_2.is_xs_date("2022-02-29")
+
+    def test_year_zero(self) -> None:
+        assert not v3_2.is_xs_date("0000-01-01")
+
+    def test_years_before_common_era(self) -> None:
+        # NOTE (mristin):
+        # The year -1 is the astronomical year 0, and hence a leap year.
+        assert v3_2.is_xs_date("-0001-02-29")
+        assert not v3_2.is_xs_date("-0004-02-29")
+        assert v3_2.is_xs_date("-0401-02-29")
+
+    def test_large_year(self) -> None:
+        assert v3_2.is_xs_date("123456789012345678902000-02-29")
+        assert not v3_2.is_xs_date("123456789012345678901900-02-29")
+
+
+class Test_is_xs_date_time(unittest.TestCase):
+    def test_valid(self) -> None:
+        assert v3_2.is_xs_date_time("2020-02-29T12:34:56")
+        assert v3_2.is_xs_date_time("2020-02-29T12:34:56+01:00")
+
+    def test_invalid_day(self) -> None:
+        assert not v3_2.is_xs_date_time("2022-02-29T12:34:56")
+
+    def test_pattern_mismatch(self) -> None:
+        assert not v3_2.is_xs_date_time("2022-02-28")
+
+
+class Test_is_xs_date_time_UTC(unittest.TestCase):
+    def test_valid(self) -> None:
+        assert v3_2.is_xs_date_time_UTC("2020-02-29T12:34:56Z")
+
+    def test_invalid_day(self) -> None:
+        assert not v3_2.is_xs_date_time_UTC("2022-02-29T12:34:56Z")
+
+    def test_not_UTC(self) -> None:
+        assert not v3_2.is_xs_date_time_UTC("2020-02-29T12:34:56+01:00")
+
+
+class Test_is_xs_g_month_day(unittest.TestCase):
+    def test_valid(self) -> None:
+        assert v3_2.is_xs_g_month_day("--02-29")
+        assert v3_2.is_xs_g_month_day("--12-31Z")
+
+    def test_invalid_day(self) -> None:
+        assert not v3_2.is_xs_g_month_day("--02-30")
+        assert not v3_2.is_xs_g_month_day("--04-31")
+
+
+class Test_is_xs_integer_ranges(unittest.TestCase):
+    def test_bounds(self) -> None:
+        for name, (lower, upper) in {
+            "long": (-(2**63), 2**63 - 1),
+            "int": (-(2**31), 2**31 - 1),
+            "short": (-(2**15), 2**15 - 1),
+            "byte": (-(2**7), 2**7 - 1),
+            "unsigned_long": (0, 2**64 - 1),
+            "unsigned_int": (0, 2**32 - 1),
+            "unsigned_short": (0, 2**16 - 1),
+            "unsigned_byte": (0, 2**8 - 1),
+        }.items():
+            is_xs = getattr(v3_2, f"is_xs_{name}")
+
+            assert is_xs(str(lower)), (name, lower)
+            assert is_xs(str(upper)), (name, upper)
+            assert is_xs(f"+000{upper}"), (name, upper)
+            assert not is_xs(str(upper + 1)), (name, upper + 1)
+            assert not is_xs(f"000{upper + 1}"), (name, upper + 1)
+
+            if lower < 0:
+                assert not is_xs(str(lower - 1)), (name, lower - 1)
+                assert is_xs(f"-000{-lower}"), (name, lower)
+
+    def test_negative_zero_in_unsigned(self) -> None:
+        assert v3_2.is_xs_unsigned_long("-0")
+
+    def test_pattern_mismatch(self) -> None:
+        assert not v3_2.is_xs_long("")
+        assert not v3_2.is_xs_long("1.0")
+        assert not v3_2.is_xs_unsigned_int("-1")
+
+
+class Test_is_xs_double(unittest.TestCase):
+    def test_special_values(self) -> None:
+        assert v3_2.is_xs_double("INF")
+        assert v3_2.is_xs_double("-INF")
+        assert v3_2.is_xs_double("NaN")
+        assert not v3_2.is_xs_double("inf")
+        assert not v3_2.is_xs_double("nan")
+
+    def test_ordinary_values(self) -> None:
+        assert v3_2.is_xs_double("0")
+        assert v3_2.is_xs_double("-1.5e-3")
+        assert v3_2.is_xs_double(".5")
+        assert v3_2.is_xs_double("5.")
+        assert v3_2.is_xs_double("1e-400")
+
+    def test_largest_double(self) -> None:
+        assert v3_2.is_xs_double("1.7976931348623157e308")
+
+    def test_overflow_threshold(self) -> None:
+        threshold = v3_2.Xs_double_overflow_threshold
+        assert threshold == str(2**1024 - 2**970)
+
+        assert not v3_2.is_xs_double(threshold)
+        assert not v3_2.is_xs_double(f"-0.{threshold}e{len(threshold)}")
+        assert v3_2.is_xs_double(str(2**1024 - 2**970 - 1))
+        assert v3_2.is_xs_double("1.7976931348623158e308")
+        assert not v3_2.is_xs_double("1.7976931348623159e308")
+
+    def test_huge_exponents(self) -> None:
+        assert not v3_2.is_xs_double("1e99999999999999999999")
+        assert v3_2.is_xs_double("1e-99999999999999999999")
+        assert v3_2.is_xs_double("0.0e99999999999999999999")
+
+
+class Test_is_xs_float(unittest.TestCase):
+    def test_largest_float(self) -> None:
+        assert v3_2.is_xs_float("3.4028234663852886e38")
+
+    def test_overflow_threshold(self) -> None:
+        assert not v3_2.is_xs_float(str(2**128 - 2**103))
+        assert v3_2.is_xs_float(str(2**128 - 2**103 - 1))
+        assert not v3_2.is_xs_float("1e39")
+
+    def test_special_values(self) -> None:
+        assert v3_2.is_xs_float("INF")
+        assert v3_2.is_xs_float("NaN")
+
+
+class Test_value_consistent_with_XSD_type(unittest.TestCase):
+    def test_all_types(self) -> None:
+        valid_and_invalid = {
+            v3_2.Data_type_def_XSD.Any_URI: ("https://example.com", "%"),
+            v3_2.Data_type_def_XSD.Base_64_binary: ("QUJD", "QUJ"),
+            v3_2.Data_type_def_XSD.Boolean: ("true", "yes"),
+            v3_2.Data_type_def_XSD.Byte: ("-128", "128"),
+            v3_2.Data_type_def_XSD.Date: ("2020-02-29", "2022-02-29"),
+            v3_2.Data_type_def_XSD.Date_time: (
+                "2020-02-29T00:00:00",
+                "2022-02-29T00:00:00",
+            ),
+            v3_2.Data_type_def_XSD.Decimal: ("-1.5", "1e3"),
+            v3_2.Data_type_def_XSD.Double: ("1e308", "1e309"),
+            v3_2.Data_type_def_XSD.Duration: ("P1D", "1D"),
+            v3_2.Data_type_def_XSD.Float: ("1e38", "1e39"),
+            v3_2.Data_type_def_XSD.G_day: ("---01", "---32"),
+            v3_2.Data_type_def_XSD.G_month: ("--01", "--13"),
+            v3_2.Data_type_def_XSD.G_month_day: ("--02-29", "--02-30"),
+            v3_2.Data_type_def_XSD.G_year: ("2022", "22"),
+            v3_2.Data_type_def_XSD.G_year_month: ("2022-01", "2022-13"),
+            v3_2.Data_type_def_XSD.Hex_binary: ("0A", "0"),
+            v3_2.Data_type_def_XSD.Int: ("2147483647", "2147483648"),
+            v3_2.Data_type_def_XSD.Integer: ("-12345678901234567890", "1.0"),
+            v3_2.Data_type_def_XSD.Long: (
+                "-9223372036854775808",
+                "9223372036854775808",
+            ),
+            v3_2.Data_type_def_XSD.Negative_integer: ("-1", "0"),
+            v3_2.Data_type_def_XSD.Non_negative_integer: ("0", "-1"),
+            v3_2.Data_type_def_XSD.Non_positive_integer: ("0", "1"),
+            v3_2.Data_type_def_XSD.Positive_integer: ("1", "0"),
+            v3_2.Data_type_def_XSD.Short: ("32767", "32768"),
+            v3_2.Data_type_def_XSD.String: ("free text", "\x00"),
+            v3_2.Data_type_def_XSD.Time: ("12:34:56", "25:00:00"),
+            v3_2.Data_type_def_XSD.Unsigned_byte: ("255", "256"),
+            v3_2.Data_type_def_XSD.Unsigned_int: ("4294967295", "4294967296"),
+            v3_2.Data_type_def_XSD.Unsigned_long: (
+                "18446744073709551615",
+                "18446744073709551616",
+            ),
+            v3_2.Data_type_def_XSD.Unsigned_short: ("65535", "65536"),
+        }
+
+        assert set(valid_and_invalid) == set(v3_2.Data_type_def_XSD)
+
+        for value_type, (valid, invalid) in valid_and_invalid.items():
+            assert v3_2.value_consistent_with_XSD_type(valid, value_type), (
+                value_type,
+                valid,
+            )
+            assert not v3_2.value_consistent_with_XSD_type(invalid, value_type), (
+                value_type,
+                invalid,
+            )
+
+
+class Test_submodel_element_is_of_type(unittest.TestCase):
+    def test_concrete_and_abstract_types(self) -> None:
+        prop = v3_2.Property(value_type=v3_2.Data_type_def_XSD.String)
+
+        assert v3_2.submodel_element_is_of_type(
+            prop, v3_2.AAS_submodel_elements.Property
+        )
+        assert v3_2.submodel_element_is_of_type(
+            prop, v3_2.AAS_submodel_elements.Data_element
+        )
+        assert v3_2.submodel_element_is_of_type(
+            prop, v3_2.AAS_submodel_elements.Submodel_element
+        )
+        assert not v3_2.submodel_element_is_of_type(
+            prop, v3_2.AAS_submodel_elements.Range
+        )
+        assert not v3_2.submodel_element_is_of_type(
+            prop, v3_2.AAS_submodel_elements.Submodel_element_collection
+        )
+
+
+class Test_semantic_IDs(unittest.TestCase):
+    @staticmethod
+    def _make_reference(*values: str) -> v3_2.Reference:
+        return v3_2.Reference(
+            type=v3_2.Reference_types.External_reference,
+            keys=[
+                v3_2.Key(
+                    type=v3_2.Key_types.Global_reference,
+                    value=v3_2.Identifier(value),
+                )
+                for value in values
+            ],
+        )
+
+    def test_reference_key_values_equal(self) -> None:
+        assert v3_2.reference_key_values_equal(
+            self._make_reference("a", "b"), self._make_reference("a", "b")
+        )
+        assert not v3_2.reference_key_values_equal(
+            self._make_reference("a", "b"), self._make_reference("a", "c")
+        )
+        assert not v3_2.reference_key_values_equal(
+            self._make_reference("a"), self._make_reference("a", "b")
+        )
+
+    def test_submodel_elements_have_identical_semantic_IDs(self) -> None:
+        def make_property(semantic_ID: Optional[v3_2.Reference]) -> v3_2.Property:
+            return v3_2.Property(
+                value_type=v3_2.Data_type_def_XSD.String, semantic_ID=semantic_ID
+            )
+
+        assert v3_2.submodel_elements_have_identical_semantic_IDs(
+            [
+                make_property(self._make_reference("a")),
+                make_property(None),
+                make_property(self._make_reference("a")),
+            ]
+        )
+        assert not v3_2.submodel_elements_have_identical_semantic_IDs(
+            [
+                make_property(self._make_reference("a")),
+                make_property(self._make_reference("b")),
+            ]
+        )
+
+
+class Test_or_default(unittest.TestCase):
+    def test_defaults(self) -> None:
+        assert (
+            v3_2.Extension(name=v3_2.Name_type("some")).value_type_or_default()
+            == v3_2.Data_type_def_XSD.String
+        )
+        assert (
+            v3_2.Qualifier(
+                type=v3_2.Qualifier_type("some"),
+                value_type=v3_2.Data_type_def_XSD.String,
+            ).kind_or_default()
+            == v3_2.Qualifier_kind.Concept_qualifier
+        )
+        assert (
+            v3_2.Submodel(ID=v3_2.Identifier("some")).kind_or_default()
+            == v3_2.Modelling_kind.Instance
+        )
+        assert v3_2.Submodel_element_list(
+            type_value_list_element=v3_2.AAS_submodel_elements.Property,
+            value_type_list_element=v3_2.Data_type_def_XSD.String,
+        ).order_relevant_or_default()
+
+    def test_explicit_values(self) -> None:
+        assert (
+            v3_2.Qualifier(
+                type=v3_2.Qualifier_type("some"),
+                value_type=v3_2.Data_type_def_XSD.String,
+                kind=v3_2.Qualifier_kind.Template_qualifier,
+            ).kind_or_default()
+            == v3_2.Qualifier_kind.Template_qualifier
+        )
+        assert not v3_2.Submodel_element_list(
+            type_value_list_element=v3_2.AAS_submodel_elements.Property,
+            value_type_list_element=v3_2.Data_type_def_XSD.String,
+            order_relevant=False,
+        ).order_relevant_or_default()
+
+
 class Test_v3_2_runtime_behavior(unittest.TestCase):
     @staticmethod
     def _make_template_qualifier() -> v3_2.Qualifier:
@@ -919,10 +1229,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
             annotations=annotations,
         )
 
-    @mock.patch.object(v3_2, "submodel_element_is_of_type", return_value=True)
-    def test_template_submodel_accepts_nested_singleton_lists(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_template_submodel_accepts_nested_singleton_lists(self) -> None:
         prop = self._make_property("p1")
         inner_collection = self._make_collection("c1", [prop])
         inner_list = self._make_list("l2", [inner_collection])
@@ -936,10 +1243,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
             submodel_elements=[top_list],
         )
 
-    @mock.patch.object(v3_2, "submodel_element_is_of_type", return_value=True)
-    def test_template_submodel_rejects_list_with_two_elements(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_template_submodel_rejects_list_with_two_elements(self) -> None:
         col1 = self._make_collection("c1", [self._make_property("p1")])
         col2 = self._make_collection("c2", [self._make_property("p2")])
         bad_list = self._make_list("l1", [col1, col2])
@@ -952,10 +1256,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
                 submodel_elements=[bad_list],
             )
 
-    @mock.patch.object(v3_2, "submodel_element_is_of_type", return_value=True)
-    def test_template_submodel_rejects_list_without_value(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_template_submodel_rejects_list_without_value(self) -> None:
         bad_list = self._make_list("l1", None)
 
         with self.assertRaises(icontract.ViolationError):
@@ -966,10 +1267,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
                 submodel_elements=[bad_list],
             )
 
-    @mock.patch.object(v3_2, "submodel_element_is_of_type", return_value=True)
-    def test_operation_rejects_variable_list_with_two_elements(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_operation_rejects_variable_list_with_two_elements(self) -> None:
         col1 = self._make_collection("c1", [self._make_property("p1")])
         col2 = self._make_collection("c2", [self._make_property("p2")])
         bad_list = self._make_list("l1", [col1, col2])
@@ -980,10 +1278,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
                 input_variables=[v3_2.Operation_variable(value=bad_list)],
             )
 
-    @mock.patch.object(v3_2, "submodel_element_is_of_type", return_value=True)
-    def test_operation_rejects_variable_list_without_value(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_operation_rejects_variable_list_without_value(self) -> None:
         bad_list = self._make_list("l1", None)
 
         with self.assertRaises(icontract.ViolationError):
@@ -992,10 +1287,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
                 input_variables=[v3_2.Operation_variable(value=bad_list)],
             )
 
-    @mock.patch.object(v3_2, "submodel_element_is_of_type", return_value=True)
-    def test_operation_accepts_nested_singleton_list_variable(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_operation_accepts_nested_singleton_list_variable(self) -> None:
         prop = self._make_property("p1")
         inner_collection = self._make_collection("c1", [prop])
         inner_list = self._make_list("l2", [inner_collection])
@@ -1007,10 +1299,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
             input_variables=[v3_2.Operation_variable(value=top_list)],
         )
 
-    @mock.patch.object(v3_2, "submodel_element_is_of_type", return_value=True)
-    def test_template_submodel_rejects_list_with_two_elements_in_entity(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_template_submodel_rejects_list_with_two_elements_in_entity(self) -> None:
         col1 = self._make_collection("c1", [self._make_property("p1")])
         col2 = self._make_collection("c2", [self._make_property("p2")])
         bad_list = self._make_list("l1", [col1, col2])
@@ -1147,10 +1436,7 @@ class Test_v3_2_runtime_behavior(unittest.TestCase):
             ],
         )
 
-    @mock.patch.object(v3_2, "is_xs_date_time_UTC", return_value=True)
-    def test_administrative_information_sets_created_and_updated_at(
-        self, _mocked: mock.MagicMock
-    ) -> None:
+    def test_administrative_information_sets_created_and_updated_at(self) -> None:
         created_at = v3_2.Date_time_UTC("2022-04-01T01:02:03Z")
         updated_at = v3_2.Date_time_UTC("2022-04-02T01:02:03Z")
 
