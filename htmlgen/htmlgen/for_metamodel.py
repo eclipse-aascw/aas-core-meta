@@ -776,6 +776,7 @@ def _property_as_dt_dd(
 def _method_as_dt_dd(
         method: intermediate.MethodUnion,
         cls: intermediate.ClassUnion,
+        symbol_table: intermediate.SymbolTable,
         constraint_href_map: Mapping[str, str],
         atok: asttokens.ASTTokens
 )->Tuple[Optional[Stripped], Optional[Error]]:
@@ -830,7 +831,7 @@ def _method_as_dt_dd(
             dd_divs.append(
                 f"""\
 [[!DEDENT
-{htmlgen.transpilation.highlight_body(method.body, atok)}
+{htmlgen.transpilation.highlight_body(method.body, atok, symbol_table)}
 DEDENT!]]"""
             )
     else:
@@ -1136,6 +1137,7 @@ def _generate_page_for_class(
             dt_dd_method, error = _method_as_dt_dd(
                 method=method,
                 cls=cls,
+                symbol_table=symbol_table,
                 constraint_href_map=constraint_href_map,
                 atok=atok
             )
@@ -1464,7 +1466,6 @@ def _generate_page_for_verification_function(
         ],
         symbol_table: intermediate.SymbolTable,
         constraint_href_map: Mapping[str, str],
-        base_environment: intermediate_type_inference.Environment,
         atok: asttokens.ASTTokens,
 ) -> Tuple[Optional[str], Optional[Error]]:
     blocks = [
@@ -1522,15 +1523,11 @@ def _generate_page_for_verification_function(
             )
         )
 
-    code_div, error = htmlgen.transpilation.transpile_body_of_verification(
+    code_div = htmlgen.transpilation.render_body_of_verification(
         verification=verification,
         symbol_table=symbol_table,
-        base_environment=base_environment,
         atok=atok,
     )
-    if error is not None:
-        return None, error
-    assert code_div is not None
 
     blocks.append(
         Stripped(
@@ -1714,7 +1711,6 @@ def generate(
                 verification=something,
                 symbol_table=symbol_table,
                 constraint_href_map=constraint_href_map,
-                base_environment=base_environment,
                 atok=atok,
             )
         else:

@@ -86,16 +86,16 @@ an environment.
 
 from enum import Enum
 from re import match
-from typing import AbstractSet, Final, List, Optional, Sequence
+from typing import AbstractSet, Final, List, Optional, Sequence, Set
 
 from icontract import invariant, DBC, ensure
 
 from aas_core_meta.marker import (
     abstract,
     serialization,
-    implementation_specific,
     verification,
     constant_set,
+    constant_str,
     non_mutating,
 )
 
@@ -171,9 +171,7 @@ def matches_xs_date_time_UTC(text: str) -> bool:
     return match(pattern, text) is not None
 
 
-# noinspection PyUnusedLocal
 @verification
-@implementation_specific
 def is_xs_date_time_UTC(text: str) -> bool:
     """
     Check that :paramref:`text` is a ``xs:dateTime`` with time zone set to UTC.
@@ -187,7 +185,7 @@ def is_xs_date_time_UTC(text: str) -> bool:
     :param text: Text to be checked
     :returns: True if the :paramref:`text` is a valid ``xs:dateTime`` in UTC
     """
-    raise NotImplementedError()
+    return matches_xs_date_time_UTC(text) and _is_prefix_valid_date(text)
 
 
 @verification
@@ -309,7 +307,6 @@ def matches_BCP_47(text: str) -> bool:
 
 
 @verification
-@implementation_specific
 def lang_strings_have_unique_languages(
     lang_strings: Sequence["Abstract_lang_string"],
 ) -> bool:
@@ -317,19 +314,17 @@ def lang_strings_have_unique_languages(
     Check that the :paramref:`lang_strings` do not have overlapping
     :attr:`Abstract_lang_string.language`'s
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
-    language_set = set()
+    language_set: Set[str] = set()
     for lang_string in lang_strings:
         if lang_string.language in language_set:
             return False
+
         language_set.add(lang_string.language)
 
     return True
 
 
 @verification
-@implementation_specific
 def qualifier_types_are_unique(qualifiers: Sequence["Qualifier"]) -> bool:
     """
     Check that :attr:`Qualifier.type`'s of :paramref:`qualifiers` are unique.
@@ -337,10 +332,7 @@ def qualifier_types_are_unique(qualifiers: Sequence["Qualifier"]) -> bool:
     :param qualifiers: to be checked
     :return: True if all :attr:`Qualifier.type`'s are unique
     """
-    # NOTE (mristin):
-    # This implementation is given here only as reference. It needs to be adapted
-    # for each implementation separately.
-    observed_types = set()
+    observed_types: Set[str] = set()
     for qualifier in qualifiers:
         if qualifier.type in observed_types:
             return False
@@ -506,6 +498,110 @@ def matches_xs_date(text: str) -> bool:
 
 
 @verification
+def _is_leap_year(year: str) -> bool:
+    """
+    Check that the :paramref:`year` of an ``xs:date`` is a leap year.
+
+    The :paramref:`year` is expected to be given as text, *i.e.*, as digits with
+    an optional minus prefix, as the year can be arbitrarily large.
+
+    We consider the years B.C. to be one-off. See the note at
+    https://www.w3.org/TR/xmlschema-2/#dateTime: "'-0001' is the lexical
+    representation of the year 1 Before Common Era (1 BCE, sometimes written "1 BC")."
+    Hence, the year -1 in XML is the year 0 in astronomical years.
+
+    :param year: Text of the year to be checked
+    :returns: True if the :paramref:`year` is a leap year
+    """
+    # NOTE (mristin):
+    # Since 10000 is divisible by 400, the last four digits suffice to determine
+    # the leap year. This way, we never parse a number which does not fit into
+    # an integer.
+    remainder = int(year.lstrip("-")[-4:]) % 400
+
+    if year[:1] == "-":
+        # NOTE (mristin):
+        # We shift the years B.C. by one. We add 399 instead of subtracting 1 so
+        # that the remainder is never negative, as the modulo of negative numbers
+        # differs between the programming languages.
+        remainder = (remainder + 399) % 400
+
+    # See: https://en.wikipedia.org/wiki/Leap_year#Algorithm
+    return remainder % 4 == 0 and (remainder % 100 != 0 or remainder == 0)
+
+
+@verification
+def _is_day_of_month_valid(is_leap_year: bool, month: int, day: int) -> bool:
+    """
+    Check that the :paramref:`day` exists in the :paramref:`month`.
+
+    :param is_leap_year: True if February has 29 days
+    :param month: Month of the year, starting with 1
+    :param day: Day of the month, starting with 1
+    :returns: True if the :paramref:`day` exists in the :paramref:`month`
+    """
+    if month < 1 or month > 12 or day < 1:
+        return False
+
+    if month == 2:
+        if is_leap_year:
+            return day <= 29
+
+        return day <= 28
+
+    if month == 4 or month == 6 or month == 9 or month == 11:
+        return day <= 30
+
+    return day <= 31
+
+
+@verification
+def _is_prefix_valid_date(text: str) -> bool:
+    """
+    Check that the date at the start of :paramref:`text` is valid.
+
+    The :paramref:`text` is expected to start with a date matching the pattern
+    ``-?YYYY-MM-DD``, where the year can have more than four digits. Whatever follows
+    the date, such as the time or the time zone, is ignored.
+
+    :param text: Text to be checked
+    :returns: True if the date at the start of :paramref:`text` is valid
+    """
+    # NOTE (mristin):
+    # We start searching from the second character so that we skip the minus
+    # of a year B.C.
+    month_start = text.find("-", 1) + 1
+
+    year = text[: month_start - 1]
+
+    # We do not accept year zero,
+    # see the note at: https://www.w3.org/TR/xmlschema-2/#dateTime
+    if year.lstrip("-").lstrip("0") == "":
+        return False
+
+    month = int(text[month_start : month_start + 2])
+    day = int(text[month_start + 3 : month_start + 5])
+
+    return _is_day_of_month_valid(_is_leap_year(year), month, day)
+
+
+@verification
+def is_xs_date(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:date``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:date``, and that
+    the day exists in the month (*e.g.*, February 29th only in leap years).
+
+    See: https://www.w3.org/TR/xmlschema-2/#date
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:date``
+    """
+    return matches_xs_date(text) and _is_prefix_valid_date(text)
+
+
+@verification
 def matches_xs_date_time(text: str) -> bool:
     """
     Check that :paramref:`text` conforms to the pattern of an ``xs:dateTime``.
@@ -535,9 +631,7 @@ def matches_xs_date_time(text: str) -> bool:
     return match(pattern, text) is not None
 
 
-# noinspection PyUnusedLocal
 @verification
-@implementation_specific
 def is_xs_date_time(text: str) -> bool:
     """
     Check that :paramref:`text` is a ``xs:dateTime``.
@@ -550,7 +644,7 @@ def is_xs_date_time(text: str) -> bool:
     :param text: Text to be checked
     :returns: True if the :paramref:`text` is a valid ``xs:dateTime``
     """
-    raise NotImplementedError()
+    return matches_xs_date_time(text) and _is_prefix_valid_date(text)
 
 
 # noinspection SpellCheckingInspection
@@ -1019,9 +1113,395 @@ def matches_xs_string(text: str) -> bool:
     return match(pattern, text) is not None
 
 
-# noinspection PyUnusedLocal
 @verification
-@implementation_specific
+def _is_magnitude_at_most(digits: str, limit: str) -> bool:
+    """
+    Check that the number given as :paramref:`digits` is at most :paramref:`limit`.
+
+    Both :paramref:`digits` and :paramref:`limit` are expected to be decimal digits
+    without a sign and without leading zeros. An empty text represents zero.
+
+    We compare the numbers digit by digit, since they might not fit into an integer.
+
+    :param digits: Number to be checked
+    :param limit: Largest allowed number
+    :returns: True if :paramref:`digits` is at most :paramref:`limit`
+    """
+    if len(digits) != len(limit):
+        return len(digits) < len(limit)
+
+    for i in range(0, len(digits)):
+        digit = int(digits[i : i + 1])
+        limit_digit = int(limit[i : i + 1])
+
+        if digit != limit_digit:
+            return digit < limit_digit
+
+    return True
+
+
+@verification
+def _is_integer_in_range(text: str, max_negative: str, max_positive: str) -> bool:
+    """
+    Check that the integer :paramref:`text` is within the given range.
+
+    The :paramref:`text` is expected to consist of decimal digits with an optional
+    sign.
+
+    :param text: Text to be checked
+    :param max_negative: Largest allowed magnitude of a negative number
+    :param max_positive: Largest allowed positive number
+    :returns: True if the :paramref:`text` is within the range
+    """
+    digits = text.lstrip("+-").lstrip("0")
+
+    if text[:1] == "-":
+        return _is_magnitude_at_most(digits, max_negative)
+
+    return _is_magnitude_at_most(digits, max_positive)
+
+
+Xs_double_overflow_threshold: Final[str] = constant_str(
+    value=(
+        "179769313486231580793728971405303415079934132710037826936173"
+        "778980444968292764750946649017977587207096330286416692887910"
+        "946555547851940402630657488671505820681908902000708383676273"
+        "854845817711531764475730270069855571366959622842914819860834"
+        "936475292719074168444365510704342711559699508093042880177904"
+        "174497792"
+    ),
+    description="""\
+Represent the smallest magnitude of a decimal which overflows an ``xs:double``.
+
+The decimals are rounded to the nearest double-precision floating-point number.
+Hence, the decimals at or beyond the half-way between the largest double,
+(2 - 2^-52) * 2^1023, and 2^1024 round to infinity. The half-way is the exact
+integer 2^1024 - 2^970, given here in decimal digits.""",
+)
+
+Xs_float_overflow_threshold: Final[str] = constant_str(
+    value="340282356779733661637539395458142568448",
+    description="""\
+Represent the smallest magnitude of a decimal which overflows an ``xs:float``.
+
+The decimals are rounded to the nearest single-precision floating-point number.
+Hence, the decimals at or beyond the half-way between the largest float,
+(2 - 2^-23) * 2^127, and 2^128 round to infinity. The half-way is the exact
+integer 2^128 - 2^103, given here in decimal digits.""",
+)
+
+
+@verification
+def _digit_at(head: str, tail: str, index: int) -> int:
+    """
+    Get the digit at :paramref:`index` of :paramref:`head` followed by :paramref:`tail`.
+
+    We can not concatenate the strings, so we index into them as if they were one.
+
+    :param head: First part of the digits
+    :param tail: Second part of the digits
+    :param index: Zero-based index of the digit
+    :returns: The digit at :paramref:`index`, or zero beyond the digits
+    """
+    if index < len(head):
+        return int(head[index : index + 1])
+
+    tail_index = index - len(head)
+    if tail_index < len(tail):
+        return int(tail[tail_index : tail_index + 1])
+
+    return 0
+
+
+@verification
+def _is_decimal_magnitude_below(text: str, limit: str) -> bool:
+    """
+    Check that the magnitude of the decimal :paramref:`text` is below :paramref:`limit`.
+
+    The :paramref:`text` is expected to match the pattern of a finite ``xs:double``
+    or ``xs:float``, *i.e.*, a decimal with an optional sign, an optional point and
+    an optional exponent. The :paramref:`limit` is expected to be a positive integer
+    without leading zeros.
+
+    We compare the numbers as strings, since they do not necessarily fit into
+    any native number, and parsing them to floating-point numbers would round them.
+
+    :param text: Decimal to be checked
+    :param limit: Exclusive upper bound on the magnitude
+    :returns: True if the magnitude of :paramref:`text` is below :paramref:`limit`
+    """
+    unsigned = text.lstrip("+-")
+
+    exponent_start = unsigned.find("e")
+    if exponent_start == -1:
+        exponent_start = unsigned.find("E")
+
+    mantissa = unsigned
+    exponent_text = ""
+    if exponent_start != -1:
+        mantissa = unsigned[:exponent_start]
+        exponent_text = unsigned[exponent_start + 1 :]
+
+    point = mantissa.find(".")
+
+    integer_part = mantissa
+    fraction_part = ""
+    if point != -1:
+        integer_part = mantissa[:point]
+        fraction_part = mantissa[point + 1 :]
+
+    # NOTE (mristin):
+    # We represent the decimal as the significant digits ``0.d1 d2 ...`` times
+    # ten to the power of the magnitude. The significant digits are given by
+    # the ``head`` followed by the ``tail``.
+    head = integer_part.lstrip("0")
+    tail = fraction_part
+    shift: int = len(head)
+
+    if head == "":
+        tail = fraction_part.lstrip("0")
+        if tail == "":
+            # The decimal is zero.
+            return True
+
+        shift = len(tail) - len(fraction_part)
+
+    exponent_digits = exponent_text.lstrip("+-").lstrip("0")
+
+    # NOTE (mristin):
+    # An exponent with more than 15 digits does not safely fit into an integer.
+    # Its magnitude then dwarfs the number of the digits in any text, so its sign
+    # alone decides.
+    if len(exponent_digits) > 15:
+        return exponent_text[:1] == "-"
+
+    exponent: int = 0
+    if len(exponent_digits) > 0:
+        exponent = int(exponent_digits)
+
+        if exponent_text[:1] == "-":
+            exponent = -exponent
+
+    magnitude = exponent + shift
+
+    if magnitude != len(limit):
+        return magnitude < len(limit)
+
+    for i in range(0, len(limit)):
+        digit = _digit_at(head, tail, i)
+        limit_digit = int(limit[i : i + 1])
+
+        if digit != limit_digit:
+            return digit < limit_digit
+
+    # NOTE (mristin):
+    # The decimal starts with all the digits of the limit, so it is at least as
+    # large as the limit.
+    return False
+
+
+@verification
+def is_xs_double(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:double``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:double``, and
+    that it does not overflow, *i.e.*, that it does not round to infinity unless it
+    is ``INF`` or ``-INF``. See :const:`Xs_double_overflow_threshold`.
+
+    See: https://www.w3.org/TR/xmlschema-2/#double
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:double``
+    """
+    if not matches_xs_double(text):
+        return False
+
+    if text == "INF" or text == "-INF" or text == "NaN":
+        return True
+
+    return _is_decimal_magnitude_below(text, Xs_double_overflow_threshold)
+
+
+@verification
+def is_xs_float(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:float``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:float``, and
+    that it does not overflow, *i.e.*, that it does not round to infinity unless it
+    is ``INF`` or ``-INF``. See :const:`Xs_float_overflow_threshold`.
+
+    See: https://www.w3.org/TR/xmlschema-2/#float
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:float``
+    """
+    if not matches_xs_float(text):
+        return False
+
+    if text == "INF" or text == "-INF" or text == "NaN":
+        return True
+
+    return _is_decimal_magnitude_below(text, Xs_float_overflow_threshold)
+
+
+@verification
+def is_xs_g_month_day(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:gMonthDay``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:gMonthDay``,
+    and that the day exists in the month. February 29th is valid, as there is no
+    year to tell otherwise.
+
+    See: https://www.w3.org/TR/xmlschema-2/#gMonthDay
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:gMonthDay``
+    """
+    return matches_xs_g_month_day(text) and _is_day_of_month_valid(
+        True, int(text[2:4]), int(text[5:7])
+    )
+
+
+@verification
+def is_xs_long(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:long``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:long``, and
+    that the number is within the range of ``xs:long``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#long
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:long``
+    """
+    return matches_xs_long(text) and _is_integer_in_range(
+        text, "9223372036854775808", "9223372036854775807"
+    )
+
+
+@verification
+def is_xs_int(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:int``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:int``, and
+    that the number is within the range of ``xs:int``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#int
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:int``
+    """
+    return matches_xs_int(text) and _is_integer_in_range(
+        text, "2147483648", "2147483647"
+    )
+
+
+@verification
+def is_xs_short(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:short``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:short``, and
+    that the number is within the range of ``xs:short``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#short
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:short``
+    """
+    return matches_xs_short(text) and _is_integer_in_range(text, "32768", "32767")
+
+
+@verification
+def is_xs_byte(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:byte``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:byte``, and
+    that the number is within the range of ``xs:byte``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#byte
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:byte``
+    """
+    return matches_xs_byte(text) and _is_integer_in_range(text, "128", "127")
+
+
+@verification
+def is_xs_unsigned_long(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:unsignedLong``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:unsignedLong``, and
+    that the number is within the range of ``xs:unsignedLong``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#unsignedLong
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:unsignedLong``
+    """
+    return matches_xs_unsigned_long(text) and _is_integer_in_range(
+        text, "0", "18446744073709551615"
+    )
+
+
+@verification
+def is_xs_unsigned_int(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:unsignedInt``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:unsignedInt``, and
+    that the number is within the range of ``xs:unsignedInt``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#unsignedInt
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:unsignedInt``
+    """
+    return matches_xs_unsigned_int(text) and _is_integer_in_range(
+        text, "0", "4294967295"
+    )
+
+
+@verification
+def is_xs_unsigned_short(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:unsignedShort``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:unsignedShort``, and
+    that the number is within the range of ``xs:unsignedShort``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#unsignedShort
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:unsignedShort``
+    """
+    return matches_xs_unsigned_short(text) and _is_integer_in_range(text, "0", "65535")
+
+
+@verification
+def is_xs_unsigned_byte(text: str) -> bool:
+    """
+    Check that :paramref:`text` is a valid ``xs:unsignedByte``.
+
+    We check that the :paramref:`text` matches the pattern of ``xs:unsignedByte``, and
+    that the number is within the range of ``xs:unsignedByte``.
+
+    See: https://www.w3.org/TR/xmlschema-2/#unsignedByte
+
+    :param text: Text to be checked
+    :returns: True if the :paramref:`text` is a valid ``xs:unsignedByte``
+    """
+    return matches_xs_unsigned_byte(text) and _is_integer_in_range(text, "0", "255")
+
+
+@verification
 def value_consistent_with_XSD_type(value: str, value_type: "Data_type_def_XSD") -> bool:
     """
     Check that the :paramref:`value` conforms to its :paramref:`value_type`.
@@ -1030,16 +1510,70 @@ def value_consistent_with_XSD_type(value: str, value_type: "Data_type_def_XSD") 
     :param value_type: pre-defined value type
     :return: True if the :paramref:`value` conforms
     """
-    # NOTE (mristin):
-    # We specify the pattern-matching functions above, and they should be handy to check
-    # for most obvious pattern mismatches.
-    #
-    # However, bear in mind that the pattern checks are not enough! For example,
-    # consider a ``xs:dateTime``. You need to check not only that the value
-    # follows the pattern, but also that the day-of-month and leap seconds are taken
-    # into account.
+    if value_type == Data_type_def_XSD.Any_URI:
+        return matches_xs_any_URI(value)
+    elif value_type == Data_type_def_XSD.Base_64_binary:
+        return matches_xs_base_64_binary(value)
+    elif value_type == Data_type_def_XSD.Boolean:
+        return matches_xs_boolean(value)
+    elif value_type == Data_type_def_XSD.Byte:
+        return is_xs_byte(value)
+    elif value_type == Data_type_def_XSD.Date:
+        return is_xs_date(value)
+    elif value_type == Data_type_def_XSD.Date_time:
+        return is_xs_date_time(value)
+    elif value_type == Data_type_def_XSD.Decimal:
+        return matches_xs_decimal(value)
+    elif value_type == Data_type_def_XSD.Double:
+        return is_xs_double(value)
+    elif value_type == Data_type_def_XSD.Duration:
+        return matches_xs_duration(value)
+    elif value_type == Data_type_def_XSD.Float:
+        return is_xs_float(value)
+    elif value_type == Data_type_def_XSD.G_day:
+        return matches_xs_g_day(value)
+    elif value_type == Data_type_def_XSD.G_month:
+        return matches_xs_g_month(value)
+    elif value_type == Data_type_def_XSD.G_month_day:
+        return is_xs_g_month_day(value)
+    elif value_type == Data_type_def_XSD.G_year:
+        return matches_xs_g_year(value)
+    elif value_type == Data_type_def_XSD.G_year_month:
+        return matches_xs_g_year_month(value)
+    elif value_type == Data_type_def_XSD.Hex_binary:
+        return matches_xs_hex_binary(value)
+    elif value_type == Data_type_def_XSD.Int:
+        return is_xs_int(value)
+    elif value_type == Data_type_def_XSD.Integer:
+        return matches_xs_integer(value)
+    elif value_type == Data_type_def_XSD.Long:
+        return is_xs_long(value)
+    elif value_type == Data_type_def_XSD.Negative_integer:
+        return matches_xs_negative_integer(value)
+    elif value_type == Data_type_def_XSD.Non_negative_integer:
+        return matches_xs_non_negative_integer(value)
+    elif value_type == Data_type_def_XSD.Non_positive_integer:
+        return matches_xs_non_positive_integer(value)
+    elif value_type == Data_type_def_XSD.Positive_integer:
+        return matches_xs_positive_integer(value)
+    elif value_type == Data_type_def_XSD.Short:
+        return is_xs_short(value)
+    elif value_type == Data_type_def_XSD.String:
+        return matches_xs_string(value)
+    elif value_type == Data_type_def_XSD.Time:
+        return matches_xs_time(value)
+    elif value_type == Data_type_def_XSD.Unsigned_byte:
+        return is_xs_unsigned_byte(value)
+    elif value_type == Data_type_def_XSD.Unsigned_int:
+        return is_xs_unsigned_int(value)
+    elif value_type == Data_type_def_XSD.Unsigned_long:
+        return is_xs_unsigned_long(value)
+    elif value_type == Data_type_def_XSD.Unsigned_short:
+        return is_xs_unsigned_short(value)
 
-    raise NotImplementedError()
+    # NOTE (mristin):
+    # We covered all the literals of :class:`Data_type_def_XSD` above.
+    return False
 
 
 @verification
@@ -1069,27 +1603,53 @@ def is_model_reference_to_referable(reference: "Reference") -> bool:
 
 
 @verification
-@implementation_specific
 def ID_shorts_are_unique(referables: Sequence["Referable"]) -> bool:
     """
     Check that the :attr:`Referable.ID_short`'s among the :paramref:`referables` are
     unique in their namespace.
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
-    id_short_set = set()
+    id_short_set: Set[str] = set()
     for referable in referables:
-        if referable.ID_short is not None:
-            if referable.ID_short in id_short_set:
-                return False
+        id_short = referable.ID_short
+        if id_short is None:
+            continue
 
-            id_short_set.add(referable.ID_short)
+        if id_short in id_short_set:
+            return False
+
+        id_short_set.add(id_short)
 
     return True
 
 
 @verification
-@implementation_specific
+def _collect_unique_ID_shorts_of_variables(
+    variables: Optional[Sequence["Operation_variable"]], id_short_set: Set[str]
+) -> bool:
+    """
+    Collect the :attr:`Referable.ID_short`'s of the :paramref:`variables` values.
+
+    :param variables: Operation variables whose ID-shorts we collect
+    :param id_short_set: ID-shorts observed so far, extended in place
+    :returns: False if an ID-short has been already observed
+    """
+    if variables is None:
+        return True
+
+    for variable in variables:
+        id_short = variable.value.ID_short
+        if id_short is None:
+            continue
+
+        if id_short in id_short_set:
+            return False
+
+        id_short_set.add(id_short)
+
+    return True
+
+
+@verification
 def ID_shorts_of_variables_are_unique(
     input_variables: Optional[Sequence["Operation_variable"]],
     output_variables: Optional[Sequence["Operation_variable"]],
@@ -1100,31 +1660,12 @@ def ID_shorts_of_variables_are_unique(
     :paramref:`input_variables`, :paramref:`output_variables`
     and :paramref:`inoutput_variables` are unique.
     """
-    # NOTE (s-heppner):
-    # This implementation will not be transpiled, but is given here as reference.
-    id_short_set = set()
-    if input_variables is not None:
-        for variable in input_variables:
-            if variable.value.ID_short is not None:
-                if variable.value.ID_short in id_short_set:
-                    return False
-
-                id_short_set.add(variable.value.ID_short)
-    if output_variables is not None:
-        for variable in output_variables:
-            if variable.value.ID_short is not None:
-                if variable.value.ID_short in id_short_set:
-                    return False
-
-                id_short_set.add(variable.value.ID_short)
-    if inoutput_variables is not None:
-        for variable in inoutput_variables:
-            if variable.value.ID_short is not None:
-                if variable.value.ID_short in id_short_set:
-                    return False
-
-                id_short_set.add(variable.value.ID_short)
-    return True
+    id_short_set: Set[str] = set()
+    return (
+        _collect_unique_ID_shorts_of_variables(input_variables, id_short_set)
+        and _collect_unique_ID_shorts_of_variables(output_variables, id_short_set)
+        and _collect_unique_ID_shorts_of_variables(inoutput_variables, id_short_set)
+    )
 
 
 @verification
@@ -1135,7 +1676,6 @@ def specific_asset_ID_name_matches_global_asset_ID(name: str) -> bool:
 
 
 @verification
-@implementation_specific
 def submodel_element_has_template_qualifier_in_tree(
     element: "Submodel_element",
 ) -> bool:
@@ -1176,7 +1716,6 @@ def submodel_element_has_template_qualifier_in_tree(
 
 
 @verification
-@implementation_specific
 def submodel_elements_have_no_template_qualifiers(
     elements: Sequence["Submodel_element"],
 ) -> bool:
@@ -1190,7 +1729,6 @@ def submodel_elements_have_no_template_qualifiers(
 
 
 @verification
-@implementation_specific
 def submodel_element_lists_have_exactly_one_element_in_tree(
     element: "Submodel_element",
 ) -> bool:
@@ -1229,7 +1767,6 @@ def submodel_element_lists_have_exactly_one_element_in_tree(
 
 
 @verification
-@implementation_specific
 def submodel_element_lists_in_submodel_elements_have_exactly_one_element(
     elements: Sequence["Submodel_element"],
 ) -> bool:
@@ -1243,65 +1780,70 @@ def submodel_element_lists_in_submodel_elements_have_exactly_one_element(
 
 
 @verification
-@implementation_specific
 def submodel_element_lists_in_operation_variables_have_exactly_one_element(
     input_variables: Optional[Sequence["Operation_variable"]],
     output_variables: Optional[Sequence["Operation_variable"]],
     inoutput_variables: Optional[Sequence["Operation_variable"]],
 ) -> bool:
     """Check that submodel element lists in operation variables have one item."""
-    # NOTE (aaronzi):
-    # This implementation will not be transpiled, but is given here as reference.
-    for variable_list in (input_variables, output_variables, inoutput_variables):
-        if variable_list is None:
-            continue
-
-        for variable in variable_list:
-            if not submodel_element_lists_have_exactly_one_element_in_tree(
-                variable.value
-            ):
-                return False
-
-    return True
+    return (
+        (
+            input_variables is None
+            or all(
+                submodel_element_lists_have_exactly_one_element_in_tree(variable.value)
+                for variable in input_variables
+            )
+        )
+        and (
+            output_variables is None
+            or all(
+                submodel_element_lists_have_exactly_one_element_in_tree(variable.value)
+                for variable in output_variables
+            )
+        )
+        and (
+            inoutput_variables is None
+            or all(
+                submodel_element_lists_have_exactly_one_element_in_tree(variable.value)
+                for variable in inoutput_variables
+            )
+        )
+    )
 
 
 @verification
-@implementation_specific
 def extension_names_are_unique(extensions: Sequence["Extension"]) -> bool:
     """Check that the extension names are unique."""
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
-    name_set = set()
+    name_set: Set[str] = set()
     for extension in extensions:
         if extension.name in name_set:
             return False
+
         name_set.add(extension.name)
 
     return True
 
 
 @verification
-@implementation_specific
 def submodel_elements_have_identical_semantic_IDs(
     elements: Sequence["Submodel_element"],
 ) -> bool:
     """Check that all semantic IDs are identical, if specified."""
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as a reference.
-    semantic_ID = None
+    that_semantic_ID: Optional[Reference] = None
     for element in elements:
-        if element.semantic_ID is not None:
-            if semantic_ID is None:
-                semantic_ID = element.semantic_ID
-            else:
-                if semantic_ID != element.semantic_ID:
-                    return False
+        this_semantic_ID = element.semantic_ID
+        if this_semantic_ID is None:
+            continue
+
+        if that_semantic_ID is None:
+            that_semantic_ID = this_semantic_ID
+        elif not reference_key_values_equal(that_semantic_ID, this_semantic_ID):
+            return False
+
     return True
 
 
-# noinspection PyUnusedLocal
 @verification
-@implementation_specific
 def submodel_element_is_of_type(
     element: "Submodel_element", element_type: "AAS_submodel_elements"
 ) -> bool:
@@ -1309,36 +1851,69 @@ def submodel_element_is_of_type(
     Check that the run-time type of the :paramref:`element` coincides with
     :paramref:`element_type`.
     """
-    raise NotImplementedError()
+    if element_type == AAS_submodel_elements.Annotated_relationship_element:
+        return isinstance(element, Annotated_relationship_element)
+    elif element_type == AAS_submodel_elements.Basic_event_element:
+        return isinstance(element, Basic_event_element)
+    elif element_type == AAS_submodel_elements.Blob:
+        return isinstance(element, Blob)
+    elif element_type == AAS_submodel_elements.Capability:
+        return isinstance(element, Capability)
+    elif element_type == AAS_submodel_elements.Data_element:
+        return isinstance(element, Data_element)
+    elif element_type == AAS_submodel_elements.Entity:
+        return isinstance(element, Entity)
+    elif element_type == AAS_submodel_elements.Event_element:
+        return isinstance(element, Event_element)
+    elif element_type == AAS_submodel_elements.File:
+        return isinstance(element, File)
+    elif element_type == AAS_submodel_elements.Multi_language_property:
+        return isinstance(element, Multi_language_property)
+    elif element_type == AAS_submodel_elements.Operation:
+        return isinstance(element, Operation)
+    elif element_type == AAS_submodel_elements.Property:
+        return isinstance(element, Property)
+    elif element_type == AAS_submodel_elements.Range:
+        return isinstance(element, Range)
+    elif element_type == AAS_submodel_elements.Reference_element:
+        return isinstance(element, Reference_element)
+    elif element_type == AAS_submodel_elements.Relationship_element:
+        return isinstance(element, Relationship_element)
+    elif element_type == AAS_submodel_elements.Submodel_element:
+        return True
+    elif element_type == AAS_submodel_elements.Submodel_element_list:
+        return isinstance(element, Submodel_element_list)
+    elif element_type == AAS_submodel_elements.Submodel_element_collection:
+        return isinstance(element, Submodel_element_collection)
+
+    # NOTE (mristin):
+    # We covered all the literals of :class:`AAS_submodel_elements` above.
+    return False
 
 
 @verification
-@implementation_specific
 def properties_or_ranges_have_value_type(
     elements: Sequence["Submodel_element"], value_type: "Data_type_def_XSD"
 ) -> bool:
     """Check that all the :paramref:`elements` have the :paramref:`value_type`."""
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
     for element in elements:
-        if isinstance(element, (Property, Range)):
-            if element.value_type != value_type:
-                return False
+        if isinstance(element, Property) and element.value_type != value_type:
+            return False
+
+        if isinstance(element, Range) and element.value_type != value_type:
+            return False
 
     return True
 
 
 @verification
-@implementation_specific
 def reference_key_values_equal(that: "Reference", other: "Reference") -> bool:
     """Check that the two references are equal by comparing their key values."""
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
     if len(that.keys) != len(other.keys):
         return False
 
-    for that_key, other_key in zip(that.keys, other.keys):
-        if that_key.value != other_key.value:
+    for i in range(0, len(that.keys)):
+        if that.keys[i].value != other.keys[i].value:
             return False
 
     return True
@@ -1671,14 +2246,12 @@ class Extension(Has_semantics):
     Default: :attr:`Data_type_def_XSD.String`
     """
 
-    @implementation_specific
     @non_mutating
     def value_type_or_default(self) -> "Data_type_def_XSD":
-        # NOTE (mristin):
-        # This implementation will not be transpiled, but is given here as reference.
-        return (
-            self.value_type if self.value_type is not None else Data_type_def_XSD.String
-        )
+        if self.value_type is not None:
+            return self.value_type
+
+        return Data_type_def_XSD.String
 
     value: Optional["Value_data_type"]
     """
@@ -1925,12 +2498,12 @@ class Has_kind(DBC):
     Default: :attr:`Modelling_kind.Instance`
     """
 
-    @implementation_specific
     @non_mutating
     def kind_or_default(self) -> "Modelling_kind":
-        # NOTE (mristin):
-        # This implementation will not be transpiled, but is given here as reference.
-        return self.kind if self.kind is not None else Modelling_kind.Instance
+        if self.kind is not None:
+            return self.kind
+
+        return Modelling_kind.Instance
 
     def __init__(self, kind: Optional["Modelling_kind"] = None) -> None:
         self.kind = kind
@@ -2172,12 +2745,12 @@ class Qualifier(Has_semantics):
     Default: :attr:`Qualifier_kind.Concept_qualifier`
     """
 
-    @implementation_specific
     @non_mutating
     def kind_or_default(self) -> "Qualifier_kind":
-        # NOTE (mristin):
-        # This implementation will not be transpiled, but is given here as reference.
-        return self.kind if self.kind is not None else Qualifier_kind.Concept_qualifier
+        if self.kind is not None:
+            return self.kind
+
+        return Qualifier_kind.Concept_qualifier
 
     type: "Qualifier_type"
     """
@@ -3014,12 +3587,12 @@ class Submodel_element_list(Submodel_element):
     Default: ``True``
     """
 
-    @implementation_specific
     @non_mutating
     def order_relevant_or_default(self) -> bool:
-        # NOTE (mristin):
-        # This implementation will not be transpiled, but is given here as reference.
-        return self.order_relevant if self.order_relevant is not None else True
+        if self.order_relevant is not None:
+            return self.order_relevant
+
+        return True
 
     semantic_ID_list_element: Optional["Reference"]
     """
@@ -4288,7 +4861,6 @@ class Capability(Submodel_element):
 
 
 @verification
-@implementation_specific
 def data_specification_IEC_61360s_for_property_or_value_have_appropriate_data_type(
     embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
@@ -4317,7 +4889,6 @@ def data_specification_IEC_61360s_for_property_or_value_have_appropriate_data_ty
 
 
 @verification
-@implementation_specific
 def data_specification_IEC_61360s_for_reference_have_appropriate_data_type(
     embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
@@ -4346,7 +4917,6 @@ def data_specification_IEC_61360s_for_reference_have_appropriate_data_type(
 
 
 @verification
-@implementation_specific
 def data_specification_IEC_61360s_for_document_have_appropriate_data_type(
     embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
@@ -4375,7 +4945,6 @@ def data_specification_IEC_61360s_for_document_have_appropriate_data_type(
 
 
 @verification
-@implementation_specific
 def data_specification_IEC_61360s_have_data_type(
     embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
@@ -4398,7 +4967,6 @@ def data_specification_IEC_61360s_have_data_type(
 
 
 @verification
-@implementation_specific
 def data_specification_IEC_61360s_have_value(
     embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
@@ -4421,7 +4989,6 @@ def data_specification_IEC_61360s_have_value(
 
 
 @verification
-@implementation_specific
 def data_specification_IEC_61360s_have_definition_at_least_in_english(
     embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
@@ -4429,23 +4996,17 @@ def data_specification_IEC_61360s_have_definition_at_least_in_english(
     Check that the :attr:`Data_specification_IEC_61360.definition` is defined
     for all data specifications whose content is given as IEC 61360 at least in English.
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
-
     for data_specification in embedded_data_specifications:
-        if not isinstance(
-            data_specification.data_specification_content, Data_specification_IEC_61360
-        ):
+        content = data_specification.data_specification_content
+        if not isinstance(content, Data_specification_IEC_61360):
             continue
 
-        if data_specification.data_specification_content.definition is None:
+        definition = content.definition
+        if definition is None:
             return False
 
         if not any(
-            is_BCP_47_for_english(lang_string.language)
-            for lang_string in (
-                data_specification.data_specification_content.definition
-            )
+            is_BCP_47_for_english(lang_string.language) for lang_string in definition
         ):
             return False
 
