@@ -1066,39 +1066,20 @@
         </dl>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='nv'>tchar</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&quot;[!#$%&amp;&#x27;*+\\-.^_`|~0-9a-zA-Z]&quot;</span>
-<span class='p'>)</span>
-<span class='nv'>token</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>tchar</span><span class='si'>}</span><span class='sc'>)+</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>type</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>token</span><span class='si'>}</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>subtype</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>token</span><span class='si'>}</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>ows</span> <span class='o'>=</span> <span class='sc'>&#x27;[ \t]*&#x27;</span>
-<span class='nv'>obsText</span> <span class='o'>=</span> <span class='sc'>&#x27;[\\x80-\\xff]&#x27;</span>
-<span class='nv'>qdText</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>([\t !#-\\[\\]-~]|</span><span class='si'>{</span><span class='nv'>obsText</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>quotedPair</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>\\\\([\t !-~]|</span><span class='si'>{</span><span class='nv'>obsText</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>quotedString</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>&quot;(</span><span class='si'>{</span><span class='nv'>qdText</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>quotedPair</span><span class='si'>}</span><span class='sc'>)*&quot;</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>parameter</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>token</span><span class='si'>}</span><span class='sc'>=(</span><span class='si'>{</span><span class='nv'>token</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>quotedString</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>mediaType</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>^</span><span class='si'>{</span><span class='nv'>type</span><span class='si'>}</span><span class='sc'>/</span><span class='si'>{</span><span class='nv'>subtype</span><span class='si'>}</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>ows</span><span class='si'>}</span><span class='sc'>;</span><span class='si'>{</span><span class='nv'>ows</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>parameter</span><span class='si'>}</span><span class='sc'>)*$</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='k'>return</span> <span class='nb'>match</span><span class='p'>(</span>
-    <span class='nv'>mediaType</span>,
-    <span class='nv'>text</span>
-<span class='p'>)</span> <span class='ow'>is not</span> <span class='kc'>None</span></pre></div>
+      <div class="highlight"><pre><span></span><span class="n">tchar</span> <span class="o">=</span> <span class="s2">"[!#$%&amp;'*+</span><span class="se">\\</span><span class="s2">-.^_`|~0-9a-zA-Z]"</span>
+<span class="n">token</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">tchar</span><span class="si">}</span><span class="s2">)+"</span>
+<span class="nb">type</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">"</span>
+<span class="n">subtype</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">"</span>
+<span class="n">ows</span> <span class="o">=</span> <span class="s2">"[ </span><span class="se">\t</span><span class="s2">]*"</span>
+<span class="n">obs_text</span> <span class="o">=</span> <span class="s2">"[</span><span class="se">\\</span><span class="s2">x80-</span><span class="se">\\</span><span class="s2">xff]"</span>
+<span class="n">qd_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"([</span><span class="se">\t</span><span class="s2"> !#-</span><span class="se">\\</span><span class="s2">[</span><span class="se">\\</span><span class="s2">]-~]|</span><span class="si">{</span><span class="n">obs_text</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">quoted_pair</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\\\\</span><span class="s2">([</span><span class="se">\t</span><span class="s2"> !-~]|</span><span class="si">{</span><span class="n">obs_text</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">quoted_string</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'"(</span><span class="si">{</span><span class="n">qd_text</span><span class="si">}</span><span class="s1">|</span><span class="si">{</span><span class="n">quoted_pair</span><span class="si">}</span><span class="s1">)*"'</span>
+<span class="n">parameter</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">=(</span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">quoted_string</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">media_type</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"^</span><span class="si">{</span><span class="nb">type</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">subtype</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">ows</span><span class="si">}</span><span class="s2">;</span><span class="si">{</span><span class="n">ows</span><span class="si">}{</span><span class="n">parameter</span><span class="si">}</span><span class="s2">)*$"</span>
+
+<span class="k">return</span> <span class="n">match</span><span class="p">(</span><span class="n">media_type</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</pre></div>
     </div>
   </div>
 </div>

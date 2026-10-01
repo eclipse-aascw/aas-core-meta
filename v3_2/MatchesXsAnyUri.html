@@ -1074,126 +1074,48 @@
         </dl>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='nv'>alphanum</span> <span class='o'>=</span> <span class='sc'>&#x27;[a-zA-Z0-9]&#x27;</span>
-<span class='nv'>mark</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&quot;[\\-_.!~*&#x27;()]&quot;</span>
-<span class='p'>)</span>
-<span class='nv'>unreserved</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>mark</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>hex</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;([0-9]|[aA]|[bB]|[cC]|[dD]|[eE]|[fF]|[aA]|[bB]|[cC]|[dD]|[eE]|[fF])&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>escaped</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>%</span><span class='si'>{</span><span class='nv'>hex</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>hex</span><span class='si'>}</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>pchar</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>unreserved</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>escaped</span><span class='si'>}</span><span class='sc'>|[:@&amp;=+$,])</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>param</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>pchar</span><span class='si'>}</span><span class='sc'>)*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>segment</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>pchar</span><span class='si'>}</span><span class='sc'>)*(;</span><span class='si'>{</span><span class='nv'>param</span><span class='si'>}</span><span class='sc'>)*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>pathSegments</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>segment</span><span class='si'>}</span><span class='sc'>(/</span><span class='si'>{</span><span class='nv'>segment</span><span class='si'>}</span><span class='sc'>)*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>absPath</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>/</span><span class='si'>{</span><span class='nv'>pathSegments</span><span class='si'>}</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>scheme</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;[a-zA-Z][a-zA-Z0-9+\\-.]*&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>userinfo</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>unreserved</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>escaped</span><span class='si'>}</span><span class='sc'>|[;:&amp;=+$,])*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>domainlabel</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>|-)*</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>toplabel</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>([a-zA-Z]|[a-zA-Z](</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>|-)*</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>hostname</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>domainlabel</span><span class='si'>}</span><span class='sc'>\\.)*</span><span class='si'>{</span><span class='nv'>toplabel</span><span class='si'>}</span><span class='sc'>(\\.)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>ipv4address</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>hex4</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;[0-9A-Fa-f]{1,4}&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>hexseq</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>hex4</span><span class='si'>}</span><span class='sc'>(:</span><span class='si'>{</span><span class='nv'>hex4</span><span class='si'>}</span><span class='sc'>)*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>hexpart</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>hexseq</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>hexseq</span><span class='si'>}</span><span class='sc'>::(</span><span class='si'>{</span><span class='nv'>hexseq</span><span class='si'>}</span><span class='sc'>)?|::(</span><span class='si'>{</span><span class='nv'>hexseq</span><span class='si'>}</span><span class='sc'>)?)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>ipv6address</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>hexpart</span><span class='si'>}</span><span class='sc'>(:</span><span class='si'>{</span><span class='nv'>ipv4address</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>ipv6reference</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>\\[</span><span class='si'>{</span><span class='nv'>ipv6address</span><span class='si'>}</span><span class='sc'>\\]</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>host</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>hostname</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>ipv4address</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>ipv6reference</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>port</span> <span class='o'>=</span> <span class='sc'>&#x27;[0-9]*&#x27;</span>
-<span class='nv'>hostport</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>host</span><span class='si'>}</span><span class='sc'>(:</span><span class='si'>{</span><span class='nv'>port</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>server</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>((</span><span class='si'>{</span><span class='nv'>userinfo</span><span class='si'>}</span><span class='sc'>@)?</span><span class='si'>{</span><span class='nv'>hostport</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>regName</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>unreserved</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>escaped</span><span class='si'>}</span><span class='sc'>|[$,;:@&amp;=+])+</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>authority</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>server</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>regName</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>netPath</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>//</span><span class='si'>{</span><span class='nv'>authority</span><span class='si'>}</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>absPath</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>reserved</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;[;/?:@&amp;=+$,\\[\\]]&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>uric</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>reserved</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>unreserved</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>escaped</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>query</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>uric</span><span class='si'>}</span><span class='sc'>)*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>hierPart</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>netPath</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>absPath</span><span class='si'>}</span><span class='sc'>)(\\?</span><span class='si'>{</span><span class='nv'>query</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>uricNoSlash</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>unreserved</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>escaped</span><span class='si'>}</span><span class='sc'>|[;?:@&amp;=+$,])</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>opaquePart</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>uricNoSlash</span><span class='si'>}</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>uric</span><span class='si'>}</span><span class='sc'>)*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>absoluteuri</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>scheme</span><span class='si'>}</span><span class='sc'>:(</span><span class='si'>{</span><span class='nv'>hierPart</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>opaquePart</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>fragment</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>uric</span><span class='si'>}</span><span class='sc'>)*</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>relSegment</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>unreserved</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>escaped</span><span class='si'>}</span><span class='sc'>|[;@&amp;=+$,])+</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>relPath</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>relSegment</span><span class='si'>}</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>absPath</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>relativeuri</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>netPath</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>absPath</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>relPath</span><span class='si'>}</span><span class='sc'>)(\\?</span><span class='si'>{</span><span class='nv'>query</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>uriReference</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>^(</span><span class='si'>{</span><span class='nv'>absoluteuri</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>relativeuri</span><span class='si'>}</span><span class='sc'>)?(\\#</span><span class='si'>{</span><span class='nv'>fragment</span><span class='si'>}</span><span class='sc'>)?$</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='k'>return</span> <span class='nb'>match</span><span class='p'>(</span>
-    <span class='nv'>uriReference</span>,
-    <span class='nv'>text</span>
-<span class='p'>)</span> <span class='ow'>is not</span> <span class='kc'>None</span></pre></div>
+      <div class="highlight"><pre><span></span><span class="n">alphanum</span> <span class="o">=</span> <span class="s2">"[a-zA-Z0-9]"</span>
+<span class="n">mark</span> <span class="o">=</span> <span class="s2">"[</span><span class="se">\\</span><span class="s2">-_.!~*'()]"</span>
+<span class="n">unreserved</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">mark</span><span class="si">}</span><span class="s2">)"</span>
+<span class="nb">hex</span> <span class="o">=</span> <span class="s2">"([0-9]|[aA]|[bB]|[cC]|[dD]|[eE]|[fF]|[aA]|[bB]|[cC]|[dD]|[eE]|[fF])"</span>
+<span class="n">escaped</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"%</span><span class="si">{</span><span class="nb">hex</span><span class="si">}{</span><span class="nb">hex</span><span class="si">}</span><span class="s2">"</span>
+<span class="n">pchar</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">unreserved</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">escaped</span><span class="si">}</span><span class="s2">|[:@&amp;=+$,])"</span>
+<span class="n">param</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">pchar</span><span class="si">}</span><span class="s2">)*"</span>
+<span class="n">segment</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">pchar</span><span class="si">}</span><span class="s2">)*(;</span><span class="si">{</span><span class="n">param</span><span class="si">}</span><span class="s2">)*"</span>
+<span class="n">path_segments</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">segment</span><span class="si">}</span><span class="s2">(/</span><span class="si">{</span><span class="n">segment</span><span class="si">}</span><span class="s2">)*"</span>
+<span class="n">abs_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"/</span><span class="si">{</span><span class="n">path_segments</span><span class="si">}</span><span class="s2">"</span>
+<span class="n">scheme</span> <span class="o">=</span> <span class="s2">"[a-zA-Z][a-zA-Z0-9+</span><span class="se">\\</span><span class="s2">-.]*"</span>
+<span class="n">userinfo</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">unreserved</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">escaped</span><span class="si">}</span><span class="s2">|[;:&amp;=+$,])*"</span>
+<span class="n">domainlabel</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">|-)*</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">toplabel</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"([a-zA-Z]|[a-zA-Z](</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">|-)*</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">hostname</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">domainlabel</span><span class="si">}</span><span class="se">\\</span><span class="s2">.)*</span><span class="si">{</span><span class="n">toplabel</span><span class="si">}</span><span class="s2">(</span><span class="se">\\</span><span class="s2">.)?"</span>
+<span class="n">ipv4address</span> <span class="o">=</span> <span class="s2">"[0-9]{1,3}</span><span class="se">\\</span><span class="s2">.[0-9]{1,3}</span><span class="se">\\</span><span class="s2">.[0-9]{1,3}</span><span class="se">\\</span><span class="s2">.[0-9]{1,3}"</span>
+<span class="n">hex4</span> <span class="o">=</span> <span class="s2">"[0-9A-Fa-f]{1,4}"</span>
+<span class="n">hexseq</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">hex4</span><span class="si">}</span><span class="s2">(:</span><span class="si">{</span><span class="n">hex4</span><span class="si">}</span><span class="s2">)*"</span>
+<span class="n">hexpart</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">hexseq</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">hexseq</span><span class="si">}</span><span class="s2">::(</span><span class="si">{</span><span class="n">hexseq</span><span class="si">}</span><span class="s2">)?|::(</span><span class="si">{</span><span class="n">hexseq</span><span class="si">}</span><span class="s2">)?)"</span>
+<span class="n">ipv6address</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">hexpart</span><span class="si">}</span><span class="s2">(:</span><span class="si">{</span><span class="n">ipv4address</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="n">ipv6reference</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\\</span><span class="s2">[</span><span class="si">{</span><span class="n">ipv6address</span><span class="si">}</span><span class="se">\\</span><span class="s2">]"</span>
+<span class="n">host</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">hostname</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">ipv4address</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">ipv6reference</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">port</span> <span class="o">=</span> <span class="s2">"[0-9]*"</span>
+<span class="n">hostport</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">(:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="n">server</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"((</span><span class="si">{</span><span class="n">userinfo</span><span class="si">}</span><span class="s2">@)?</span><span class="si">{</span><span class="n">hostport</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="n">reg_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">unreserved</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">escaped</span><span class="si">}</span><span class="s2">|[$,;:@&amp;=+])+"</span>
+<span class="n">authority</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">server</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">reg_name</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">net_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"//</span><span class="si">{</span><span class="n">authority</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">abs_path</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="n">reserved</span> <span class="o">=</span> <span class="s2">"[;/?:@&amp;=+$,</span><span class="se">\\</span><span class="s2">[</span><span class="se">\\</span><span class="s2">]]"</span>
+<span class="n">uric</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">reserved</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">unreserved</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">escaped</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">uric</span><span class="si">}</span><span class="s2">)*"</span>
+<span class="n">hier_part</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">net_path</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">abs_path</span><span class="si">}</span><span class="s2">)(</span><span class="se">\\</span><span class="s2">?</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="n">uric_no_slash</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">unreserved</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">escaped</span><span class="si">}</span><span class="s2">|[;?:@&amp;=+$,])"</span>
+<span class="n">opaque_part</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">uric_no_slash</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">uric</span><span class="si">}</span><span class="s2">)*"</span>
+<span class="n">absoluteuri</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">:(</span><span class="si">{</span><span class="n">hier_part</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">opaque_part</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">fragment</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">uric</span><span class="si">}</span><span class="s2">)*"</span>
+<span class="n">rel_segment</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">unreserved</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">escaped</span><span class="si">}</span><span class="s2">|[;@&amp;=+$,])+"</span>
+<span class="n">rel_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">rel_segment</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">abs_path</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="n">relativeuri</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">net_path</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">abs_path</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">rel_path</span><span class="si">}</span><span class="s2">)(</span><span class="se">\\</span><span class="s2">?</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="n">uri_reference</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"^(</span><span class="si">{</span><span class="n">absoluteuri</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">relativeuri</span><span class="si">}</span><span class="s2">)?(</span><span class="se">\\</span><span class="s2">#</span><span class="si">{</span><span class="n">fragment</span><span class="si">}</span><span class="s2">)?$"</span>
+<span class="k">return</span> <span class="n">match</span><span class="p">(</span><span class="n">uri_reference</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</pre></div>
     </div>
   </div>
 </div>

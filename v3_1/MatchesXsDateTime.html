@@ -1023,41 +1023,25 @@
         </dl>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='nv'>digit</span> <span class='o'>=</span> <span class='sc'>&#x27;[0-9]&#x27;</span>
-<span class='nv'>yearFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>-?(([1-9]</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>+)|(0</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>))</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>monthFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;((0[1-9])|(1[0-2]))&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>dayFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>((0[1-9])|([12]</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>)|(3[01]))</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>hourFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(([01]</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>)|(2[0-3]))</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>minuteFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>[0-5]</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>secondFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>([0-5]</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>)(\\.</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>+)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>endOfDayFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;24:00:00(\\.0+)?&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>timezoneFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(Z|(\\+|-)((0</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>|1[0-3]):</span><span class='si'>{</span><span class='nv'>minuteFrag</span><span class='si'>}</span><span class='sc'>|14:00))</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>dateTimeLexicalRep</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>yearFrag</span><span class='si'>}</span><span class='sc'>-</span><span class='si'>{</span><span class='nv'>monthFrag</span><span class='si'>}</span><span class='sc'>-</span><span class='si'>{</span><span class='nv'>dayFrag</span><span class='si'>}</span><span class='sc'>T((</span><span class='si'>{</span><span class='nv'>hourFrag</span><span class='si'>}</span><span class='sc'>:</span><span class='si'>{</span><span class='nv'>minuteFrag</span><span class='si'>}</span><span class='sc'>:</span><span class='si'>{</span><span class='nv'>secondFrag</span><span class='si'>}</span><span class='sc'>)|</span><span class='si'>{</span><span class='nv'>endOfDayFrag</span><span class='si'>}</span><span class='sc'>)</span><span class='si'>{</span><span class='nv'>timezoneFrag</span><span class='si'>}</span><span class='sc'>?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>pattern</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>^</span><span class='si'>{</span><span class='nv'>dateTimeLexicalRep</span><span class='si'>}</span><span class='sc'>$</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='k'>return</span> <span class='nb'>match</span><span class='p'>(</span>
-    <span class='nv'>pattern</span>,
-    <span class='nv'>text</span>
-<span class='p'>)</span> <span class='ow'>is not</span> <span class='kc'>None</span></pre></div>
+      <div class="highlight"><pre><span></span><span class="n">digit</span> <span class="o">=</span> <span class="s2">"[0-9]"</span>
+<span class="n">year_frag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"-?(([1-9]</span><span class="si">{</span><span class="n">digit</span><span class="si">}{</span><span class="n">digit</span><span class="si">}{</span><span class="n">digit</span><span class="si">}</span><span class="s2">+)|(0</span><span class="si">{</span><span class="n">digit</span><span class="si">}{</span><span class="n">digit</span><span class="si">}{</span><span class="n">digit</span><span class="si">}</span><span class="s2">))"</span>
+<span class="n">month_frag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"((0[1-9])|(1[0-2]))"</span>
+<span class="n">day_frag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"((0[1-9])|([12]</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">)|(3[01]))"</span>
+<span class="n">hour_frag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(([01]</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">)|(2[0-3]))"</span>
+<span class="n">minute_frag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"[0-5]</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">"</span>
+<span class="n">second_frag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"([0-5]</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">)(</span><span class="se">\\</span><span class="s2">.</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">+)?"</span>
+<span class="n">end_of_day_frag</span> <span class="o">=</span> <span class="s2">"24:00:00(</span><span class="se">\\</span><span class="s2">.0+)?"</span>
+<span class="n">timezone_frag</span> <span class="o">=</span> <span class="sa">rf</span><span class="s2">"(Z|(\+|-)((0</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">|1[0-3]):</span><span class="si">{</span><span class="n">minute_frag</span><span class="si">}</span><span class="s2">|14:00))"</span>
+<span class="n">date_time_lexical_rep</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">year_frag</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">month_frag</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">day_frag</span><span class="si">}</span><span class="s2">"</span>
+    <span class="sa">f</span><span class="s2">"T"</span>
+    <span class="sa">f</span><span class="s2">"((</span><span class="si">{</span><span class="n">hour_frag</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">minute_frag</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">second_frag</span><span class="si">}</span><span class="s2">)|</span><span class="si">{</span><span class="n">end_of_day_frag</span><span class="si">}</span><span class="s2">)"</span>
+    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">timezone_frag</span><span class="si">}</span><span class="s2">?"</span>
+<span class="p">)</span>
+
+<span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"^</span><span class="si">{</span><span class="n">date_time_lexical_rep</span><span class="si">}</span><span class="s2">$"</span>
+<span class="k">return</span> <span class="n">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</pre></div>
     </div>
   </div>
 </div>

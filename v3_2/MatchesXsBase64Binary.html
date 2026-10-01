@@ -1063,45 +1063,34 @@
         </dl>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='nv'>b04Char</span> <span class='o'>=</span> <span class='sc'>&#x27;[AQgw]&#x27;</span>
-<span class='nv'>b04</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>b04Char</span><span class='si'>}</span><span class='sc'>\\x20?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>b16Char</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;[AEIMQUYcgkosw048]&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>b16</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>b16Char</span><span class='si'>}</span><span class='sc'>\\x20?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>b64Char</span> <span class='o'>=</span> <span class='sc'>&#x27;[A-Za-z0-9+/]&#x27;</span>
-<span class='nv'>b64</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>b64Char</span><span class='si'>}</span><span class='sc'>\\x20?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>b64quad</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>b64FinalQuad</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b64Char</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>padded8</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b04</span><span class='si'>}</span><span class='sc'>= ?=</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>padded16</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b64</span><span class='si'>}</span><span class='si'>{</span><span class='nv'>b16</span><span class='si'>}</span><span class='sc'>=</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>b64final</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>b64FinalQuad</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>padded16</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>padded8</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>base64Binary</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>b64quad</span><span class='si'>}</span><span class='sc'>*</span><span class='si'>{</span><span class='nv'>b64final</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>pattern</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>^</span><span class='si'>{</span><span class='nv'>base64Binary</span><span class='si'>}</span><span class='sc'>$</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='k'>return</span> <span class='nb'>match</span><span class='p'>(</span>
-    <span class='nv'>pattern</span>,
-    <span class='nv'>text</span>
-<span class='p'>)</span> <span class='ow'>is not</span> <span class='kc'>None</span></pre></div>
+      <div class="highlight"><pre><span></span><span class="n">b04_char</span> <span class="o">=</span> <span class="s2">"[AQgw]"</span>
+<span class="n">b04</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">b04_char</span><span class="si">}</span><span class="se">\\</span><span class="s2">x20?"</span>
+
+<span class="c1"># Base64 characters whose bit-string value ends in '00'</span>
+<span class="n">b16_char</span> <span class="o">=</span> <span class="s2">"[AEIMQUYcgkosw048]"</span>
+<span class="n">b16</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">b16_char</span><span class="si">}</span><span class="se">\\</span><span class="s2">x20?"</span>
+
+<span class="n">b64_char</span> <span class="o">=</span> <span class="s2">"[A-Za-z0-9+/]"</span>
+<span class="n">b64</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">b64_char</span><span class="si">}</span><span class="se">\\</span><span class="s2">x20?"</span>
+
+<span class="n">b64quad</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b64</span><span class="si">}</span><span class="s2">)"</span>
+
+<span class="c1"># b64_final_quad represents three octets of binary data without trailing space.</span>
+<span class="n">b64_final_quad</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b64_char</span><span class="si">}</span><span class="s2">)"</span>
+
+<span class="c1"># padded_8 represents a single octet at the end of the data.</span>
+<span class="n">padded_8</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b04</span><span class="si">}</span><span class="s2">=</span><span class="se">\x20</span><span class="s2">?="</span>
+
+<span class="c1"># padded_16 represents a two-octet at the end of the data.</span>
+<span class="n">padded_16</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b64</span><span class="si">}{</span><span class="n">b16</span><span class="si">}</span><span class="s2">="</span>
+
+<span class="n">b64final</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">b64_final_quad</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">padded_16</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">padded_8</span><span class="si">}</span><span class="s2">)"</span>
+
+<span class="n">base64_binary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">b64quad</span><span class="si">}</span><span class="s2">*</span><span class="si">{</span><span class="n">b64final</span><span class="si">}</span><span class="s2">)?"</span>
+
+<span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"^</span><span class="si">{</span><span class="n">base64_binary</span><span class="si">}</span><span class="s2">$"</span>
+<span class="k">return</span> <span class="n">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</pre></div>
     </div>
   </div>
 </div>

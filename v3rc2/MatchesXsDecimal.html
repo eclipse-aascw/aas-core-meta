@@ -958,32 +958,19 @@
         </dl>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='nv'>digit</span> <span class='o'>=</span> <span class='sc'>&#x27;[0-9]&#x27;</span>
-<span class='nv'>unsignedNoDecimalPtNumeral</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>+</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>noDecimalPtNumeral</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(\\+|-)?</span><span class='si'>{</span><span class='nv'>unsignedNoDecimalPtNumeral</span><span class='si'>}</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>fracFrag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>digit</span><span class='si'>}</span><span class='sc'>+</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>unsignedDecimalPtNumeral</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>unsignedNoDecimalPtNumeral</span><span class='si'>}</span><span class='sc'>\\.</span><span class='si'>{</span><span class='nv'>fracFrag</span><span class='si'>}</span><span class='sc'>|\\.</span><span class='si'>{</span><span class='nv'>fracFrag</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>decimalPtNumeral</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(\\+|-)?</span><span class='si'>{</span><span class='nv'>unsignedDecimalPtNumeral</span><span class='si'>}</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>decimalLexicalRep</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>decimalPtNumeral</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>noDecimalPtNumeral</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>pattern</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>^</span><span class='si'>{</span><span class='nv'>decimalLexicalRep</span><span class='si'>}</span><span class='sc'>$</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='k'>return</span> <span class='nb'>match</span><span class='p'>(</span>
-    <span class='nv'>pattern</span>,
-    <span class='nv'>text</span>
-<span class='p'>)</span> <span class='ow'>is not</span> <span class='kc'>None</span></pre></div>
+      <div class="highlight"><pre><span></span><span class="n">digit</span> <span class="o">=</span> <span class="s2">"[0-9]"</span>
+<span class="n">unsigned_no_decimal_pt_numeral</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">+"</span>
+<span class="n">no_decimal_pt_numeral</span> <span class="o">=</span> <span class="sa">rf</span><span class="s2">"(\+|-)?</span><span class="si">{</span><span class="n">unsigned_no_decimal_pt_numeral</span><span class="si">}</span><span class="s2">"</span>
+<span class="n">frac_frag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">digit</span><span class="si">}</span><span class="s2">+"</span>
+<span class="n">unsigned_decimal_pt_numeral</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="sa">rf</span><span class="s2">"(</span><span class="si">{</span><span class="n">unsigned_no_decimal_pt_numeral</span><span class="si">}</span><span class="s2">\.</span><span class="si">{</span><span class="n">frac_frag</span><span class="si">}</span><span class="s2">|\.</span><span class="si">{</span><span class="n">frac_frag</span><span class="si">}</span><span class="s2">)"</span>
+<span class="p">)</span>
+<span class="n">decimal_pt_numeral</span> <span class="o">=</span> <span class="sa">rf</span><span class="s2">"(\+|-)?</span><span class="si">{</span><span class="n">unsigned_decimal_pt_numeral</span><span class="si">}</span><span class="s2">"</span>
+<span class="n">decimal_lexical_rep</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">decimal_pt_numeral</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">no_decimal_pt_numeral</span><span class="si">}</span><span class="s2">)"</span>
+
+<span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"^</span><span class="si">{</span><span class="n">decimal_lexical_rep</span><span class="si">}</span><span class="s2">$"</span>
+<span class="k">return</span> <span class="n">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</pre></div>
     </div>
   </div>
 </div>

@@ -1049,51 +1049,34 @@
         </div>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='nv'>alphanum</span> <span class='o'>=</span> <span class='sc'>&#x27;[a-zA-Z0-9]&#x27;</span>
-<span class='nv'>singleton</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;[0-9A-WY-Za-wy-z]&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>extension</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>singleton</span><span class='si'>}</span><span class='sc'>(-(</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>){{2,8}})+</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>extlang</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;[a-zA-Z]{3}(-[a-zA-Z]{3}){,2}&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>irregular</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;(en-GB-oed|i-ami|i-bnn|i-default|i-enochian|i-hak|i-klingon|i-lux|i-mingo|i-navajo|i-pwn|i-tao|i-tay|i-tsu|sgn-BE-FR|sgn-BE-NL|sgn-CH-DE)&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>regular</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;(art-lojban|cel-gaulish|no-bok|no-nyn|zh-guoyu|zh-hakka|zh-min|zh-min-nan|zh-xiang)&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>grandfathered</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>irregular</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>regular</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>language</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>([a-zA-Z]{{2,3}}(-</span><span class='si'>{</span><span class='nv'>extlang</span><span class='si'>}</span><span class='sc'>)?|[a-zA-Z]{{4}}|[a-zA-Z]{{5,8}})</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>script</span> <span class='o'>=</span> <span class='sc'>&#x27;[a-zA-Z]{4}&#x27;</span>
-<span class='nv'>region</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sc'>&#x27;([a-zA-Z]{2}|[0-9]{3})&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>variant</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>((</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>){{5,8}}|[0-9](</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>){{3}})</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>privateuse</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>[xX](-(</span><span class='si'>{</span><span class='nv'>alphanum</span><span class='si'>}</span><span class='sc'>){{1,8}})+</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>langtag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='si'>{</span><span class='nv'>language</span><span class='si'>}</span><span class='sc'>(-</span><span class='si'>{</span><span class='nv'>script</span><span class='si'>}</span><span class='sc'>)?(-</span><span class='si'>{</span><span class='nv'>region</span><span class='si'>}</span><span class='sc'>)?(-</span><span class='si'>{</span><span class='nv'>variant</span><span class='si'>}</span><span class='sc'>)*(-</span><span class='si'>{</span><span class='nv'>extension</span><span class='si'>}</span><span class='sc'>)*(-</span><span class='si'>{</span><span class='nv'>privateuse</span><span class='si'>}</span><span class='sc'>)?</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>languageTag</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>(</span><span class='si'>{</span><span class='nv'>langtag</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>privateuse</span><span class='si'>}</span><span class='sc'>|</span><span class='si'>{</span><span class='nv'>grandfathered</span><span class='si'>}</span><span class='sc'>)</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='nv'>pattern</span> <span class='o'>=</span> <span class='p'>(</span>
-    <span class='sa'>f</span><span class='s1'>&#x27;</span><span class='sc'>^</span><span class='si'>{</span><span class='nv'>languageTag</span><span class='si'>}</span><span class='sc'>$</span><span class='s1'>&#x27;</span>
-<span class='p'>)</span>
-<span class='k'>return</span> <span class='nb'>match</span><span class='p'>(</span>
-    <span class='nv'>pattern</span>,
-    <span class='nv'>text</span>
-<span class='p'>)</span> <span class='ow'>is not</span> <span class='kc'>None</span></pre></div>
+      <div class="highlight"><pre><span></span><span class="n">alphanum</span> <span class="o">=</span> <span class="s2">"[a-zA-Z0-9]"</span>
+<span class="n">singleton</span> <span class="o">=</span> <span class="s2">"[0-9A-WY-Za-wy-z]"</span>
+<span class="n">extension</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">singleton</span><span class="si">}</span><span class="s2">(-(</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">)</span><span class="se">{{</span><span class="s2">2,8</span><span class="se">}}</span><span class="s2">)+"</span>
+<span class="n">extlang</span> <span class="o">=</span> <span class="s2">"[a-zA-Z]</span><span class="si">{3}</span><span class="s2">(-[a-zA-Z]</span><span class="si">{3}</span><span class="s2">){,2}"</span>
+<span class="n">irregular</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"(en-GB-oed|i-ami|i-bnn|i-default|i-enochian|i-hak|"</span>
+    <span class="s2">"i-klingon|i-lux|i-mingo|i-navajo|i-pwn|i-tao|i-tay|"</span>
+    <span class="s2">"i-tsu|sgn-BE-FR|sgn-BE-NL|sgn-CH-DE)"</span>
+<span class="p">)</span>
+<span class="n">regular</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"(art-lojban|cel-gaulish|no-bok|no-nyn|zh-guoyu|zh-hakka|"</span>
+    <span class="s2">"zh-min|zh-min-nan|zh-xiang)"</span>
+<span class="p">)</span>
+<span class="n">grandfathered</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">irregular</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">regular</span><span class="si">}</span><span class="s2">)"</span>
+<span class="n">language</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"([a-zA-Z]</span><span class="se">{{</span><span class="s2">2,3</span><span class="se">}}</span><span class="s2">(-</span><span class="si">{</span><span class="n">extlang</span><span class="si">}</span><span class="s2">)?|[a-zA-Z]</span><span class="se">{{</span><span class="s2">4</span><span class="se">}}</span><span class="s2">|[a-zA-Z]</span><span class="se">{{</span><span class="s2">5,8</span><span class="se">}}</span><span class="s2">)"</span>
+<span class="n">script</span> <span class="o">=</span> <span class="s2">"[a-zA-Z]</span><span class="si">{4}</span><span class="s2">"</span>
+<span class="n">region</span> <span class="o">=</span> <span class="s2">"([a-zA-Z]</span><span class="si">{2}</span><span class="s2">|[0-9]</span><span class="si">{3}</span><span class="s2">)"</span>
+<span class="n">variant</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"((</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">)</span><span class="se">{{</span><span class="s2">5,8</span><span class="se">}}</span><span class="s2">|[0-9](</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">)</span><span class="se">{{</span><span class="s2">3</span><span class="se">}}</span><span class="s2">)"</span>
+<span class="n">privateuse</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"[xX](-(</span><span class="si">{</span><span class="n">alphanum</span><span class="si">}</span><span class="s2">)</span><span class="se">{{</span><span class="s2">1,8</span><span class="se">}}</span><span class="s2">)+"</span>
+<span class="n">langtag</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">language</span><span class="si">}</span><span class="s2">(-</span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">)?(-</span><span class="si">{</span><span class="n">region</span><span class="si">}</span><span class="s2">)?(-</span><span class="si">{</span><span class="n">variant</span><span class="si">}</span><span class="s2">)*(-</span><span class="si">{</span><span class="n">extension</span><span class="si">}</span><span class="s2">)*(-"</span>
+    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">privateuse</span><span class="si">}</span><span class="s2">)?"</span>
+<span class="p">)</span>
+<span class="n">language_tag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">langtag</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">privateuse</span><span class="si">}</span><span class="s2">|</span><span class="si">{</span><span class="n">grandfathered</span><span class="si">}</span><span class="s2">)"</span>
+
+<span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"^</span><span class="si">{</span><span class="n">language_tag</span><span class="si">}</span><span class="s2">$"</span>
+<span class="k">return</span> <span class="n">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</pre></div>
     </div>
   </div>
 </div>
