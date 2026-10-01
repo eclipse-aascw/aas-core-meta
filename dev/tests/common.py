@@ -4,7 +4,17 @@ import ast
 import io
 import pathlib
 import textwrap
-from typing import Tuple, Mapping, List, Final, Set, Union, Sequence
+from typing import (
+    AbstractSet,
+    Tuple,
+    Mapping,
+    List,
+    Final,
+    Optional,
+    Set,
+    Union,
+    Sequence,
+)
 
 import aas_core_codegen.common
 import aas_core_codegen.parse
@@ -262,10 +272,20 @@ def assert_subclasses_correspond_to_enumeration_literals(
     enumeration_or_set: Union[
         intermediate.Enumeration, intermediate.ConstantSetOfEnumerationLiterals
     ],
+    exclude_names: Optional[AbstractSet[str]] = None,
 ) -> None:
     """
     Check that all the subclasses (including the class itself) are
     represented in the enumeration.
+
+    :param exclude_names:
+        if set, subclasses with these exact names are ignored -- used for
+        the ``*_metadata`` classes (and their common abstract base,
+        ``Submodel_element_attributes``), which are API-only, alternate
+        serializations of the "real" elements and are deliberately *not*
+        part of :class:`Key_types` (and, consequently, of the AAS_*
+        constant sets), even though they share a base class for field
+        reuse.
     """
     errors = []  # type: List[str]
 
@@ -275,6 +295,9 @@ def assert_subclasses_correspond_to_enumeration_literals(
         if not isinstance(
             our_type, (intermediate.AbstractClass, intermediate.ConcreteClass)
         ):
+            continue
+
+        if exclude_names is not None and our_type.name in exclude_names:
             continue
 
         # We also include ``Identifiable``.
@@ -313,9 +336,10 @@ def assert_all_lists_have_min_length_at_least_one(
         constraints_by_value = constraints_by_class.get(our_type, None)
 
         for prop in our_type.properties:
-            type_anno = intermediate.beneath_optional(prop.type_annotation)
-
-            if isinstance(type_anno, intermediate.ListTypeAnnotation):
+            if isinstance(
+                intermediate.beneath_optional(prop.type_annotation),
+                intermediate.ListTypeAnnotation,
+            ):
                 if constraints_by_value is None:
                     errors.append(
                         (
@@ -325,11 +349,14 @@ def assert_all_lists_have_min_length_at_least_one(
                     )
                     continue
 
-                constraints = constraints_by_value.get(type_anno, None)
-                len_constraints = (
+                constraints = constraints_by_value.get(
+                    intermediate.beneath_optional(prop.type_annotation), None
+                )
+
+                len_constraint = (
                     constraints.len_constraint if constraints is not None else None
                 )
-                if len_constraints is None:
+                if len_constraint is None:
                     errors.append(
                         (
                             f"{our_type.name}.{prop.name}",
@@ -338,7 +365,7 @@ def assert_all_lists_have_min_length_at_least_one(
                     )
                     continue
 
-                if len_constraints.min_value is None:
+                if len_constraint.min_value is None:
                     errors.append(
                         (
                             f"{our_type.name}.{prop.name}",
@@ -347,12 +374,12 @@ def assert_all_lists_have_min_length_at_least_one(
                     )
                     continue
 
-                if len_constraints.min_value < 1:
+                if len_constraint.min_value < 1:
                     errors.append(
                         (
                             f"{our_type.name}.{prop.name}",
                             f"Inferred the minimum length constraints of "
-                            f"{len_constraints.min_value}",
+                            f"{len_constraint.min_value}",
                         )
                     )
                     continue
