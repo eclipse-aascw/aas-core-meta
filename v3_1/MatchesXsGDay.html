@@ -1023,13 +1023,13 @@
         </dl>
       </div>
       <h2>Code</h2>
-      <div class="highlight"><pre><span></span><span class="n">g_day_lexical_rep</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="sa">r</span><span class="s2">"---(0[1-9]|[12][0-9]|3[01])(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))?"</span>
-<span class="p">)</span>
-
-<span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"^</span><span class="si">{</span><span class="n">g_day_lexical_rep</span><span class="si">}</span><span class="s2">$"</span>
-<span class="k">return</span> <span class="n">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-</pre></div>
+      <div class='highlight'><pre><span class='n'>g_day_lexical_rep</span> <span class='o'>=</span> <span class='p'>(</span><span class='w'>
+</span>    <span class='sa'>r</span><span class='s2'>&quot;</span><span class='s2'>---(0[1-9]|[12][0-9]|3[01])(Z|(</span><span class='s2'>\</span><span class='s2'>+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))?</span><span class='s2'>&quot;</span><span class='w'>
+</span><span class='p'>)</span><span class='w'>
+</span><span class='w'>
+</span><span class='n'>pattern</span> <span class='o'>=</span> <span class='sa'>f</span><span class='s2'>&quot;</span><span class='s2'>^</span><span class='si'>{</span><span class='n'>g_day_lexical_rep</span><span class='si'>}</span><span class='s2'>$</span><span class='s2'>&quot;</span><span class='w'>
+</span><span class='k'>return</span> <span class='n'>match</span><span class='p'>(</span><span class='n'>pattern</span><span class='p'>,</span> <span class='n'>text</span><span class='p'>)</span> <span class='ow'>is</span> <span class='ow'>not</span> <span class='kc'>None</span><span class='w'>
+</span></pre></div>
     </div>
   </div>
 </div>

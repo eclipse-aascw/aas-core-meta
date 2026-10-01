@@ -483,6 +483,16 @@
             Iec61360DataTypesWithUnit
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-item" href="XsDoubleOverflowThreshold.html">
+            XsDoubleOverflowThreshold
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="XsFloatOverflowThreshold.html">
+            XsFloatOverflowThreshold
+          </a>
+        </li>
         <li class="nav-item">Constraints</li>
         <li class="nav-item">
           <a class="nav-item" href="DataSpecificationIec61360.html#constraint-AASc-3a-002">
@@ -706,6 +716,11 @@
         </li>
         <li class="nav-item mt-2">Verification Functions</li>
         <li class="nav-item">
+          <a class="nav-item" href="CollectUniqueIdShortsOfVariables.html">
+            CollectUniqueIdShortsOfVariables
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-item" href="DataSpecificationIec61360sForDocumentHaveAppropriateDataType.html">
             DataSpecificationIec61360sForDocumentHaveAppropriateDataType
           </a>
@@ -736,6 +751,11 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-item" href="DigitAt.html">
+            DigitAt
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-item" href="ExtensionNamesAreUnique.html">
             ExtensionNamesAreUnique
           </a>
@@ -756,6 +776,31 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-item" href="IsDayOfMonthValid.html">
+            IsDayOfMonthValid
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsDecimalMagnitudeBelow.html">
+            IsDecimalMagnitudeBelow
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsIntegerInRange.html">
+            IsIntegerInRange
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsLeapYear.html">
+            IsLeapYear
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsMagnitudeAtMost.html">
+            IsMagnitudeAtMost
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-item" href="IsModelReferenceTo.html">
             IsModelReferenceTo
           </a>
@@ -766,6 +811,21 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-item" href="IsPrefixValidDate.html">
+            IsPrefixValidDate
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsByte.html">
+            IsXsByte
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsDate.html">
+            IsXsDate
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-item" href="IsXsDateTime.html">
             IsXsDateTime
           </a>
@@ -773,6 +833,56 @@
         <li class="nav-item">
           <a class="nav-item" href="IsXsDateTimeUtc.html">
             IsXsDateTimeUtc
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsDouble.html">
+            IsXsDouble
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsFloat.html">
+            IsXsFloat
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsGMonthDay.html">
+            IsXsGMonthDay
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsInt.html">
+            IsXsInt
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsLong.html">
+            IsXsLong
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsShort.html">
+            IsXsShort
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsUnsignedByte.html">
+            IsXsUnsignedByte
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsUnsignedInt.html">
+            IsXsUnsignedInt
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsUnsignedLong.html">
+            IsXsUnsignedLong
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-item" href="IsXsUnsignedShort.html">
+            IsXsUnsignedShort
           </a>
         </li>
         <li class="nav-item">
@@ -1037,7 +1147,7 @@
         DataSpecificationIec61360sHaveDataType<a class="aas-anchor-link" href="">🔗</a>
       </h1>
       <du>
-        <dt>Type: <span class="aas-type-annotation">Implementation specific</span></dt>
+        <dt>Type: <span class="aas-type-annotation">Transpilable verification function</span></dt>
         <dd></dd>
       </du>
       <div class="aas-description">
@@ -1047,7 +1157,17 @@
         </div>
       </div>
       <h2>Code</h2>
-      <div><em>Code not available as this is implementation-specific.</em></div>
+      <div class='highlight'><pre><span class='k'>return</span> <span class='nb'>all</span><span class='p'>(</span><span class='w'>
+</span>    <span class='ow'>not</span> <span class='p'>(</span><span class='w'>
+</span>        <span class='nb'>isinstance</span><span class='p'>(</span><span class='w'>
+</span>            <span class='n'>data_specification</span><span class='o'>.</span><span class='n'>data_specification_content</span><span class='p'>,</span><span class='w'>
+</span>            <span class='n'><a href='DataSpecificationIec61360.html'>Data_specification_IEC_61360</a></span><span class='p'>,</span><span class='w'>
+</span>        <span class='p'>)</span><span class='w'>
+</span>    <span class='p'>)</span><span class='w'>
+</span>    <span class='ow'>or</span> <span class='p'>(</span><span class='n'>data_specification</span><span class='o'>.</span><span class='n'>data_specification_content</span><span class='o'>.</span><span class='n'>data_type</span> <span class='ow'>is</span> <span class='ow'>not</span> <span class='kc'>None</span><span class='p'>)</span><span class='w'>
+</span>    <span class='k'>for</span> <span class='n'>data_specification</span> <span class='ow'>in</span> <span class='n'>embedded_data_specifications</span><span class='w'>
+</span><span class='p'>)</span><span class='w'>
+</span></pre></div>
     </div>
   </div>
 </div>

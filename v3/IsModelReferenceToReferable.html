@@ -1021,11 +1021,12 @@
         </div>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='k'>return</span> <span class='p'>(</span>
-    <span class='nv'>reference</span><span class='o'>.</span><a href="Reference.html#type">type</a> <span class='o'>==</span> <span class='nc'><a href='ReferenceTypes.html'>ReferenceTypes</a></span><span class='o'>.</span><a href="ReferenceTypes.html#ModelReference">ModelReference</a>
-    <span class='ow'>and</span> <span class='nb'>len</span><span class='p'>(</span><span class='nv'>reference</span><span class='o'>.</span><a href="Reference.html#keys">keys</a><span class='p'>)</span> <span class='o'>!=</span> 0
-    <span class='ow'>and</span> <span class='p'>(</span><span class='nv'>reference</span><span class='o'>.</span><a href="Reference.html#keys">keys</a>[-1]<span class='o'>.</span><a href="Key.html#type">type</a> <span class='ow'>in</span> <span class='no'>AasReferables</span><span class='p'>)</span>
-<span class='p'>)</span></pre></div>
+      <div class='highlight'><pre><span class='k'>return</span> <span class='p'>(</span><span class='w'>
+</span>    <span class='n'>reference</span><span class='o'>.</span><span class='n'>type</span> <span class='o'>==</span> <span class='n'><a href='ReferenceTypes.html'>Reference_types</a></span><span class='o'>.</span><span class='n'>Model_reference</span><span class='w'>
+</span>    <span class='ow'>and</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>reference</span><span class='o'>.</span><span class='n'>keys</span><span class='p'>)</span> <span class='o'>!=</span> <span class='mi'>0</span><span class='w'>
+</span>    <span class='ow'>and</span> <span class='n'>reference</span><span class='o'>.</span><span class='n'>keys</span><span class='p'>[</span><span class='o'>-</span><span class='mi'>1</span><span class='p'>]</span><span class='o'>.</span><span class='n'>type</span> <span class='ow'>in</span> <span class='n'><a href='AasReferables.html'>AAS_referables</a></span><span class='w'>
+</span><span class='p'>)</span><span class='w'>
+</span></pre></div>
     </div>
   </div>
 </div>
