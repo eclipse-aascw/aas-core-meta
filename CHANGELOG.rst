@@ -3,6 +3,11 @@
     Please keep this file at 72 line width so that we can copy-paste
     the release logs directly into commit messages.
 
+2026.10.1a1 (2026-10-01)
+========================
+This is a pre-release version for the first iteration of end-to-end
+generation of SDKs for V3.2, including Part 2.
+
 2022.6.21
 =========
 This is a minor enhancement version. We implement the invariant on
