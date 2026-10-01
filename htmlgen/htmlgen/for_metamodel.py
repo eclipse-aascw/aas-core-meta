@@ -64,6 +64,11 @@ def _over_descriptions_and_page_paths(
             for method in our_type.methods:
                 if method.description is not None:
                     yield method.description, page_path
+
+        elif isinstance(our_type, intermediate.NamedUnion):
+            # No special sub-descriptions in the named union
+            pass
+
         else:
             assert_never(our_type)
 
@@ -189,6 +194,23 @@ def _generate_nav(
 <li class="nav-item">
 {I}<a class="{a_class}" href="{htmlgen.naming.of(concrete_class)}.html">
 {II}{htmlgen.naming.of(concrete_class)}
+{I}</a>
+</li>""")
+
+    # endregion
+
+    # region Named unions
+
+    if len(symbol_table.named_unions) > 0:
+        lis.append('<li class="nav-item mt-2">Named Unions</li>')
+
+        for named_union in sorted(symbol_table.named_unions, key=htmlgen.naming.of):
+            a_class = "nav-item active" if active_item is named_union else "nav-item"
+
+            lis.append(f"""\
+<li class="nav-item">
+{I}<a class="{a_class}" href="{htmlgen.naming.of(named_union)}.html">
+{II}{htmlgen.naming.of(named_union)}
 {I}</a>
 </li>""")
 
@@ -749,6 +771,105 @@ def _property_as_dt_dd(
     ), None
 
 
+@require(lambda method, cls: cls.methods_by_name.get(method.name, None) is method)
+@ensure(lambda result: (result[0] is not None) ^ (result[1] is not None))
+def _method_as_dt_dd(
+        method: intermediate.MethodUnion,
+        cls: intermediate.ClassUnion,
+        constraint_href_map: Mapping[str, str],
+        atok: asttokens.ASTTokens
+)->Tuple[Optional[Stripped], Optional[Error]]:
+    """Render the method as ``<dt>...</dt><dd>...</dd>``."""
+    dd_divs = []  # type: List[str]
+
+    if method.specified_for is not cls:
+        specified_for_name = htmlgen.naming.of(method.specified_for)
+        dd_divs.append(
+            f"""\
+<div>
+{I}<em>(From <a href="{specified_for_name}.html">{specified_for_name}</a>)</em>
+</div>"""
+        )
+
+    if method.visibility is not intermediate.Visibility.PUBLIC:
+        dd_divs.append(
+            f"""\
+<div>
+{I}<em>(Visibility: {method.visibility.value})</em>
+</div>"""
+        )
+
+    if method.description is not None:
+        description, errors = htmlgen.description.generate_for_signature(
+            signature_name=method.name,
+            description=method.description,
+            constraint_href_map=constraint_href_map
+        )
+        if errors is not None:
+            return None, Error(
+                method.parsed.node,
+                f"Failed to render the description "
+                f"of the method {method.name} from the class {cls.name}",
+                errors
+            )
+
+        assert description is not None
+        dd_divs.append(
+            f"""\
+<div>
+{I}{indent_but_first_line(description, I)}
+</div>"""
+        )
+
+    if isinstance(method, intermediate.ImplementationSpecificMethod):
+        dd_divs.append(
+            "<div><em>Code not available as this is implementation-specific.</em></div>"
+        )
+    elif isinstance(method, intermediate.UnderstoodMethod):
+        if len(method.body) > 0:
+            dd_divs.append(
+                f"""\
+[[!DEDENT
+{htmlgen.transpilation.highlight_body(method.body, atok)}
+DEDENT!]]"""
+            )
+    else:
+        assert_never(method)
+
+    dd_divs_joined = "\n".join(dd_divs)
+    dd_element = f"""\
+<dd>
+{I}{indent_but_first_line(dd_divs_joined, I)}
+</dd>"""
+
+    args = ", ".join(
+        f"{htmlgen.naming.argument_name(arg.name)}: "
+        f"{htmlgen.common.type_annotation_html(arg.type_annotation)}"
+        for arg in method.arguments
+    )
+
+    returns = (
+        f" → {htmlgen.common.type_annotation_html(method.returns)}"
+        if method.returns is not None
+        else ""
+    )
+
+    anchor = f"method-{htmlgen.naming.of(method)}"
+
+    dt_element = f"""\
+<dt>
+{I}<a name="{anchor}"></a>
+{I}{htmlgen.naming.of(method)}({args}){returns}
+{I}<a class="aas-anchor-link" href="#{anchor}">🔗</a>
+</dt>"""
+
+    return Stripped(
+        f"""\
+{dt_element}
+{dd_element}"""
+    ), None
+
+
 def _our_type_appears_in_type_annotation(
         our_type: intermediate.OurType,
         type_annotation: intermediate.TypeAnnotationUnion
@@ -760,8 +881,22 @@ def _our_type_appears_in_type_annotation(
         return our_type is type_annotation.our_type
     elif isinstance(type_annotation, intermediate.ListTypeAnnotation):
         return _our_type_appears_in_type_annotation(our_type, type_annotation.items)
+    elif isinstance(type_annotation, intermediate.TupleTypeAnnotation):
+        return any(
+            _our_type_appears_in_type_annotation(our_type, item)
+            for item in type_annotation.items
+        )
+    elif isinstance(type_annotation, intermediate.SetTypeAnnotation):
+        return _our_type_appears_in_type_annotation(our_type, type_annotation.items)
     elif isinstance(type_annotation, intermediate.OptionalTypeAnnotation):
         return _our_type_appears_in_type_annotation(our_type, type_annotation.value)
+    elif isinstance(
+        type_annotation,
+        (intermediate.JsonValueTypeAnnotation, intermediate.JsonArrayTypeAnnotation)
+    ):
+        return False
+    elif isinstance(type_annotation, intermediate.JsonObjectTypeAnnotation):
+        return _our_type_appears_in_type_annotation(our_type, type_annotation.key)
     else:
         assert_never(type_annotation)
 
@@ -984,6 +1119,42 @@ def _generate_page_for_class(
             )
         )
 
+    if len(cls.methods) > 0:
+        blocks.append(
+            Stripped(
+                f"""\
+<h2>
+{I}<a name="methods"></a>
+{I}Methods
+{I}<a class="aas-anchor-link" href="#methods">🔗</a>
+</h2>"""
+            )
+        )
+
+        dt_dd_methods = []  # type: List[Stripped]
+        for method in cls.methods:
+            dt_dd_method, error = _method_as_dt_dd(
+                method=method,
+                cls=cls,
+                constraint_href_map=constraint_href_map,
+                atok=atok
+            )
+            if error is not None:
+                return None, error
+
+            assert dt_dd_method is not None
+            dt_dd_methods.append(dt_dd_method)
+
+        dt_dd_methods_joined = "\n".join(dt_dd_methods)
+        blocks.append(
+            Stripped(
+                f"""\
+<dl>
+{I}{indent_but_first_line(dt_dd_methods_joined, I)}
+</dl>"""
+            )
+        )
+
     if len(cls.invariants) > 0:
         li_invariants = []  # type: List[Stripped]
         for invariant in cls.invariants:
@@ -1030,6 +1201,99 @@ def _generate_page_for_class(
     return (
         _generate_page(
             title=Stripped(htmlgen.naming.of(cls)),
+            nav=nav,
+            content=content
+        ),
+        None
+    )
+
+
+# fmt: off
+@ensure(
+    lambda result:
+    not (result[0] is not None)
+    or no_prefix_whitespace_and_trailing_newline(result[0])
+)
+@ensure(lambda result: (result[0] is not None) ^ (result[1] is not None))
+# fmt: off
+def _generate_page_for_named_union(
+        named_union: intermediate.NamedUnion,
+        symbol_table: intermediate.SymbolTable,
+        constraint_href_map: Mapping[str, str]
+) -> Tuple[Optional[str], Optional[Error]]:
+    blocks = [
+        Stripped(
+            f"""\
+<h1>
+{I}{htmlgen.naming.of(named_union)}<a class="aas-anchor-link" href="">🔗</a><br/>
+{I}<em>(named union)</em>
+</h1>"""
+        )
+    ]  # type: List[Stripped]
+
+    if named_union.description is not None:
+        description, errors = htmlgen.description.generate_for_our_type(
+            description=named_union.description,
+            constraint_href_map=constraint_href_map
+        )
+        if errors is not None:
+            return None, Error(
+                named_union.parsed.node,
+                f"Failed to render the description "
+                f"of the named union {named_union.name}",
+                errors
+            )
+
+        assert description is not None
+        blocks.append(
+            Stripped(
+                f"""\
+<div class="aas-description">
+{I}{indent_but_first_line(description, I)}
+</div>"""
+            )
+        )
+
+    li_members = [
+        f"""\
+<li>
+{I}<a href="{htmlgen.naming.of(member)}.html">{htmlgen.naming.of(member)}</a>
+</li>"""
+        for member in named_union.members
+    ]
+
+    li_members_joined = "\n".join(li_members)
+    blocks.append(
+        Stripped(
+            f"""\
+<h2>
+{I}<a name="members"></a>
+{I}Members
+{I}<a class="aas-anchor-link" href="#members">🔗</a>
+</h2>
+<ul>
+{I}{indent_but_first_line(li_members_joined, I)}
+</ul>"""
+        )
+    )
+
+    usage_block = _generate_usages_block(
+        our_type=named_union, symbol_table=symbol_table
+    )
+    if usage_block is not None:
+        blocks.append(usage_block)
+
+    content = Stripped("\n".join(blocks))
+
+    nav = _generate_nav(
+        symbol_table=symbol_table,
+        active_item=named_union,
+        constraint_href_map=constraint_href_map
+    )
+
+    return (
+        _generate_page(
+            title=Stripped(htmlgen.naming.of(named_union)),
             nav=nav,
             content=content
         ),
@@ -1200,7 +1464,8 @@ def _generate_page_for_verification_function(
         ],
         symbol_table: intermediate.SymbolTable,
         constraint_href_map: Mapping[str, str],
-        base_environment: intermediate_type_inference.Environment
+        base_environment: intermediate_type_inference.Environment,
+        atok: asttokens.ASTTokens,
 ) -> Tuple[Optional[str], Optional[Error]]:
     blocks = [
         Stripped(
@@ -1211,34 +1476,11 @@ def _generate_page_for_verification_function(
         )
     ]  # type: List[Stripped]
 
-    environment = base_environment
-
     func_type = None  # type: Optional[str]
     if isinstance(verification, intermediate.ImplementationSpecificVerification):
         func_type = "Implementation specific"
     elif isinstance(verification, intermediate.PatternVerification):
         func_type = "Pattern verification"
-
-        environment = intermediate_type_inference.MutableEnvironment(
-            parent=base_environment
-        )
-
-        # NOTE (mristin, 2023-11-09):
-        # We add the ``match`` function here since that is completely htmlgen specific,
-        # and is not used for any other code generator.
-
-        environment.set(
-            identifier=Identifier("match"),
-            type_annotation=intermediate_type_inference.BuiltinFunctionTypeAnnotation(
-                func=intermediate_type_inference.BuiltinFunction(
-                    name=Identifier("match"),
-                    returns=intermediate_type_inference.PrimitiveTypeAnnotation(
-                        intermediate_type_inference.PrimitiveType.BOOL
-                    ),
-                )
-            )
-        )
-
     elif isinstance(verification, intermediate.TranspilableVerification):
         func_type = "Transpilable verification function"
     else:
@@ -1283,7 +1525,8 @@ def _generate_page_for_verification_function(
     code_div, error = htmlgen.transpilation.transpile_body_of_verification(
         verification=verification,
         symbol_table=symbol_table,
-        base_environment=environment,
+        base_environment=base_environment,
+        atok=atok,
     )
     if error is not None:
         return None, error
@@ -1440,6 +1683,12 @@ def generate(
                 atok=atok,
                 base_environment=base_environment
             )
+        elif isinstance(something, intermediate.NamedUnion):
+            page, error = _generate_page_for_named_union(
+                named_union=something,
+                symbol_table=symbol_table,
+                constraint_href_map=constraint_href_map,
+            )
         elif isinstance(
             something,
             (
@@ -1465,7 +1714,8 @@ def generate(
                 verification=something,
                 symbol_table=symbol_table,
                 constraint_href_map=constraint_href_map,
-                base_environment=base_environment
+                base_environment=base_environment,
+                atok=atok,
             )
         else:
             assert_never(something)

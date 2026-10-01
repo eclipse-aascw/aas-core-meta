@@ -1163,6 +1163,11 @@ class Test_assertions(unittest.TestCase):
                 for method in our_type.methods:
                     errors.extend(Test_assertions.check_method_name(method.name))
 
+            elif isinstance(our_type, intermediate.NamedUnion):
+                # NOTE (mristin):
+                # This meta-model defines no named unions.
+                pass
+
             else:
                 aas_core_codegen.common.assert_never(our_type)
 

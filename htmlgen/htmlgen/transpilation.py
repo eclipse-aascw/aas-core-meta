@@ -3,6 +3,7 @@
 import abc
 import html
 import io
+import textwrap
 from typing import (
     Tuple,
     Optional,
@@ -11,9 +12,12 @@ from typing import (
     Union,
     Set,
     Sequence,
-    cast,
 )
 
+import asttokens
+import pygments
+import pygments.formatters
+import pygments.lexers
 from aas_core_codegen import intermediate
 from aas_core_codegen.common import (
     Error,
@@ -456,33 +460,34 @@ class _Transpiler(
         elif isinstance(
             func_type, intermediate_type_inference.BuiltinFunctionTypeAnnotation
         ):
-            if func_type.func.name == "len":
+            kind = func_type.func.kind
+            if (
+                kind is intermediate_type_inference.BuiltinFunctionKind.LEN
+                or kind is intermediate_type_inference.BuiltinFunctionKind.ABS
+                or kind is intermediate_type_inference.BuiltinFunctionKind.INT
+            ):
                 assert len(args) == 1, (
                     f"Expected exactly one argument, but got: {args}; "
                     f"this should have been caught before."
                 )
 
                 return (
-                    Stripped(f"<span class='nb'>len</span>{LPAREN}{args[0]}{RPAREN}"),
+                    Stripped(
+                        f"<span class='nb'>{func_type.func.name}</span>"
+                        f"{LPAREN}{args[0]}{RPAREN}"
+                    ),
                     None,
                 )
-            elif func_type.func.name == "match":
-                joined_args = ",\n".join(args)
-
+            elif kind is intermediate_type_inference.BuiltinFunctionKind.SET:
                 return (
                     Stripped(
-                        f"<span class='nb'>match</span>{LPAREN}\n"
-                        f"{I}{indent_but_first_line(joined_args, I)}\n"
-                        f"{RPAREN}"
+                        f"<span class='nb'>set</span>{LPAREN}"
+                        f"{', '.join(args)}{RPAREN}"
                     ),
                     None,
                 )
             else:
-                return None, Error(
-                    node.original_node,
-                    f"The handling of the built-in function {node.name.identifier!r} "
-                    f"has not been implemented",
-                )
+                assert_never(kind)
         else:
             assert_never(func_type)
 
@@ -491,7 +496,9 @@ class _Transpiler(
     def transform_constant(
         self, node: parse_tree.Constant
     ) -> Tuple[Optional[Stripped], Optional[Error]]:
-        if isinstance(node.value, bool):
+        if node.value is None:
+            return Stripped(NONE), None
+        elif isinstance(node.value, bool):
             return Stripped("True" if node.value else "False"), None
         elif isinstance(node.value, (int, float)):
             return Stripped(str(node.value)), None
@@ -502,21 +509,6 @@ class _Transpiler(
                 ),
                 None,
             )
-        elif isinstance(node.value, bytes):
-            literal, multiline = python_common.bytes_literal(node.value)
-
-            literal = f"<span class='sc'>{html.escape(literal)}</span>"
-
-            if not multiline:
-                return Stripped(literal), None
-            else:
-                return (
-                    Stripped(f"""\
-{LPAREN}
-{I}{indent_but_first_line(literal, I)}
-{RPAREN}"""),
-                    None,
-                )
         else:
             assert_never(node.value)
 
@@ -1103,6 +1095,29 @@ class _TranspilableVerificationTranspiler(_Transpiler):
         )
 
 
+@require(lambda body: len(body) > 0)
+def highlight_body(
+    body: Sequence[parse_tree.Node], atok: asttokens.ASTTokens
+) -> Stripped:
+    """Highlight the original source code of the ``body`` statements."""
+    first_stmt = body[0].original_node
+    last_stmt = body[-1].original_node
+
+    start, _ = atok.get_text_range(first_stmt)
+    _, end = atok.get_text_range(last_stmt)
+
+    # NOTE (mristin):
+    # We start at the beginning of the line so that we can dedent the code.
+    line_start = atok.text.rfind("\n", 0, start) + 1
+    code = textwrap.dedent(atok.text[line_start:end])
+
+    return Stripped(
+        pygments.highlight(
+            code, pygments.lexers.PythonLexer(), pygments.formatters.HtmlFormatter()
+        ).strip()
+    )
+
+
 def transpile_body_of_verification(
     verification: Union[
         intermediate.TranspilableVerification,
@@ -1111,16 +1126,10 @@ def transpile_body_of_verification(
     ],
     symbol_table: intermediate.SymbolTable,
     base_environment: intermediate_type_inference.Environment,
+    atok: asttokens.ASTTokens,
 ) -> Tuple[Optional[Stripped], Optional[Error]]:
     """Transpile a verification function to HTML."""
-    parsed_body = None  # type: Optional[Sequence[parse_tree.Node]]
-
-    if isinstance(
-        verification,
-        (intermediate.TranspilableVerification, intermediate.PatternVerification),
-    ):
-        parsed_body = verification.parsed.body
-    elif isinstance(verification, intermediate.ImplementationSpecificVerification):
+    if isinstance(verification, intermediate.ImplementationSpecificVerification):
         # NOTE (mristin):
         # We can not parse the implementation specific verification, so we simply
         # return a comment.
@@ -1130,47 +1139,23 @@ def transpile_body_of_verification(
             ),
             None,
         )
-    else:
-        assert_never(verification)
-
-    assert parsed_body is not None
-    assert not isinstance(verification, intermediate.ImplementationSpecificVerification)
-
-    environment = intermediate_type_inference.MutableEnvironment(
-        parent=base_environment
-    )
-    if isinstance(verification, intermediate.PatternVerification):
+    elif isinstance(verification, intermediate.PatternVerification):
         # NOTE (mristin):
-        # This type is wrong for the ``re.match`` function. However, we just populate
-        # it here so that we do not have to re-implement the code highlighting for
-        # pattern verification.
-        environment.set(
-            Identifier("match"),
-            intermediate_type_inference.BuiltinFunctionTypeAnnotation(
-                intermediate_type_inference.BuiltinFunction(
-                    name=Identifier("match"),
-                    returns=intermediate_type_inference.OptionalTypeAnnotation(
-                        value=intermediate_type_inference.PrimitiveTypeAnnotation(
-                            a_type=intermediate_type_inference.PrimitiveType.BOOL
-                        )
-                    ),
-                )
-            ),
-        )
-
-        transpilable_verification = cast(
-            intermediate.TranspilableVerification, verification
-        )
+        # We do not transpile the pattern verifications, since aas-core-codegen
+        # understands them directly and does not know the ``match`` function. Their
+        # bodies consist only of local string variables and the final ``match``,
+        # so there is nothing to link, and we simply highlight the original code.
+        return highlight_body(verification.parsed.body, atok), None
     elif isinstance(verification, intermediate.TranspilableVerification):
-        transpilable_verification = verification
+        pass
     else:
         assert_never(verification)
 
     # fmt: off
     type_inference, error = (
         intermediate_type_inference.infer_for_verification(
-            verification=transpilable_verification,
-            base_environment=environment
+            verification=verification,
+            base_environment=base_environment
         )
     )
     # fmt: on
@@ -1184,7 +1169,7 @@ def transpile_body_of_verification(
         type_map=type_inference.type_map,
         environment=type_inference.environment_with_args,
         symbol_table=symbol_table,
-        verification=transpilable_verification,
+        verification=verification,
     )
 
     body = []  # type: List[Stripped]
@@ -1273,7 +1258,7 @@ def transpile_invariant(
 ) -> Tuple[Optional[Stripped], Optional[Error]]:
     """Translate the invariant from the meta-model into HTML."""
     # fmt: off
-    type_map, inference_error = (
+    inference, inference_error = (
         intermediate_type_inference.infer_for_invariant(
             invariant=invariant,
             environment=environment
@@ -1284,10 +1269,10 @@ def transpile_invariant(
     if inference_error is not None:
         return None, inference_error
 
-    assert type_map is not None
+    assert inference is not None
 
     transpiler = _InvariantTranspiler(
-        type_map=type_map,
+        type_map=inference.type_map,
         environment=environment,
         symbol_table=symbol_table,
     )

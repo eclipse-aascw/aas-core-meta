@@ -23,9 +23,24 @@ def _render_type_annotation_recursively(
     elif isinstance(type_annotation, intermediate.ListTypeAnnotation):
         items_type_anno = _render_type_annotation_recursively(type_annotation.items)
         return Stripped(f"List[{items_type_anno}]")
+    elif isinstance(type_annotation, intermediate.TupleTypeAnnotation):
+        items_joined = ", ".join(
+            _render_type_annotation_recursively(item) for item in type_annotation.items
+        )
+        return Stripped(f"Tuple[{items_joined}]")
+    elif isinstance(type_annotation, intermediate.SetTypeAnnotation):
+        items_type_anno = _render_type_annotation_recursively(type_annotation.items)
+        return Stripped(f"Set[{items_type_anno}]")
     elif isinstance(type_annotation, intermediate.OptionalTypeAnnotation):
         value_type_anno = _render_type_annotation_recursively(type_annotation.value)
         return Stripped(f"Optional[{value_type_anno}]")
+    elif isinstance(type_annotation, intermediate.JsonValueTypeAnnotation):
+        return Stripped("JSONValue")
+    elif isinstance(type_annotation, intermediate.JsonArrayTypeAnnotation):
+        return Stripped("JSONArray")
+    elif isinstance(type_annotation, intermediate.JsonObjectTypeAnnotation):
+        key_type_anno = _render_type_annotation_recursively(type_annotation.key)
+        return Stripped(f"JSONObject[{key_type_anno}]")
     else:
         assert_never(type_annotation)
 

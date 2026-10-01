@@ -86,7 +86,7 @@ an environment.
 
 from enum import Enum
 from re import match
-from typing import List, Optional, Set
+from typing import AbstractSet, Final, List, Optional, Sequence
 
 from icontract import invariant, DBC, ensure
 
@@ -311,7 +311,7 @@ def matches_BCP_47(text: str) -> bool:
 @verification
 @implementation_specific
 def lang_strings_have_unique_languages(
-    lang_strings: List["Abstract_lang_string"],
+    lang_strings: Sequence["Abstract_lang_string"],
 ) -> bool:
     """
     Check that the :paramref:`lang_strings` do not have overlapping
@@ -330,7 +330,7 @@ def lang_strings_have_unique_languages(
 
 @verification
 @implementation_specific
-def qualifier_types_are_unique(qualifiers: List["Qualifier"]) -> bool:
+def qualifier_types_are_unique(qualifiers: Sequence["Qualifier"]) -> bool:
     """
     Check that :attr:`Qualifier.type`'s of :paramref:`qualifiers` are unique.
 
@@ -1070,7 +1070,7 @@ def is_model_reference_to_referable(reference: "Reference") -> bool:
 
 @verification
 @implementation_specific
-def ID_shorts_are_unique(referables: List["Referable"]) -> bool:
+def ID_shorts_are_unique(referables: Sequence["Referable"]) -> bool:
     """
     Check that the :attr:`Referable.ID_short`'s among the :paramref:`referables` are
     unique in their namespace.
@@ -1091,9 +1091,9 @@ def ID_shorts_are_unique(referables: List["Referable"]) -> bool:
 @verification
 @implementation_specific
 def ID_shorts_of_variables_are_unique(
-    input_variables: Optional[List["Operation_variable"]],
-    output_variables: Optional[List["Operation_variable"]],
-    inoutput_variables: Optional[List["Operation_variable"]],
+    input_variables: Optional[Sequence["Operation_variable"]],
+    output_variables: Optional[Sequence["Operation_variable"]],
+    inoutput_variables: Optional[Sequence["Operation_variable"]],
 ) -> bool:
     """
     Check that the :attr:`Referable.ID_short`'s among all the
@@ -1178,7 +1178,7 @@ def submodel_element_has_template_qualifier_in_tree(
 @verification
 @implementation_specific
 def submodel_elements_have_no_template_qualifiers(
-    elements: List["Submodel_element"],
+    elements: Sequence["Submodel_element"],
 ) -> bool:
     """Check that :paramref:`elements` have no template qualifiers in their trees."""
     # NOTE (aaronzi):
@@ -1231,7 +1231,7 @@ def submodel_element_lists_have_exactly_one_element_in_tree(
 @verification
 @implementation_specific
 def submodel_element_lists_in_submodel_elements_have_exactly_one_element(
-    elements: List["Submodel_element"],
+    elements: Sequence["Submodel_element"],
 ) -> bool:
     """Check that all submodel element lists among :paramref:`elements` have one item."""
     # NOTE (aaronzi):
@@ -1245,9 +1245,9 @@ def submodel_element_lists_in_submodel_elements_have_exactly_one_element(
 @verification
 @implementation_specific
 def submodel_element_lists_in_operation_variables_have_exactly_one_element(
-    input_variables: Optional[List["Operation_variable"]],
-    output_variables: Optional[List["Operation_variable"]],
-    inoutput_variables: Optional[List["Operation_variable"]],
+    input_variables: Optional[Sequence["Operation_variable"]],
+    output_variables: Optional[Sequence["Operation_variable"]],
+    inoutput_variables: Optional[Sequence["Operation_variable"]],
 ) -> bool:
     """Check that submodel element lists in operation variables have one item."""
     # NOTE (aaronzi):
@@ -1267,7 +1267,7 @@ def submodel_element_lists_in_operation_variables_have_exactly_one_element(
 
 @verification
 @implementation_specific
-def extension_names_are_unique(extensions: List["Extension"]) -> bool:
+def extension_names_are_unique(extensions: Sequence["Extension"]) -> bool:
     """Check that the extension names are unique."""
     # NOTE (mristin):
     # This implementation will not be transpiled, but is given here as reference.
@@ -1283,7 +1283,7 @@ def extension_names_are_unique(extensions: List["Extension"]) -> bool:
 @verification
 @implementation_specific
 def submodel_elements_have_identical_semantic_IDs(
-    elements: List["Submodel_element"],
+    elements: Sequence["Submodel_element"],
 ) -> bool:
     """Check that all semantic IDs are identical, if specified."""
     # NOTE (mristin):
@@ -1315,7 +1315,7 @@ def submodel_element_is_of_type(
 @verification
 @implementation_specific
 def properties_or_ranges_have_value_type(
-    elements: List["Submodel_element"], value_type: "Data_type_def_XSD"
+    elements: Sequence["Submodel_element"], value_type: "Data_type_def_XSD"
 ) -> bool:
     """Check that all the :paramref:`elements` have the :paramref:`value_type`."""
     # NOTE (mristin):
@@ -4290,7 +4290,7 @@ class Capability(Submodel_element):
 @verification
 @implementation_specific
 def data_specification_IEC_61360s_for_property_or_value_have_appropriate_data_type(
-    embedded_data_specifications: List["Embedded_data_specification"],
+    embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
     """
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined
@@ -4319,7 +4319,7 @@ def data_specification_IEC_61360s_for_property_or_value_have_appropriate_data_ty
 @verification
 @implementation_specific
 def data_specification_IEC_61360s_for_reference_have_appropriate_data_type(
-    embedded_data_specifications: List["Embedded_data_specification"],
+    embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
     """
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined
@@ -4348,7 +4348,7 @@ def data_specification_IEC_61360s_for_reference_have_appropriate_data_type(
 @verification
 @implementation_specific
 def data_specification_IEC_61360s_for_document_have_appropriate_data_type(
-    embedded_data_specifications: List["Embedded_data_specification"],
+    embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
     """
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined
@@ -4377,7 +4377,7 @@ def data_specification_IEC_61360s_for_document_have_appropriate_data_type(
 @verification
 @implementation_specific
 def data_specification_IEC_61360s_have_data_type(
-    embedded_data_specifications: List["Embedded_data_specification"],
+    embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
     """
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined for all
@@ -4400,7 +4400,7 @@ def data_specification_IEC_61360s_have_data_type(
 @verification
 @implementation_specific
 def data_specification_IEC_61360s_have_value(
-    embedded_data_specifications: List["Embedded_data_specification"],
+    embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
     """
     Check that the :attr:`Data_specification_IEC_61360.value` is defined
@@ -4423,7 +4423,7 @@ def data_specification_IEC_61360s_have_value(
 @verification
 @implementation_specific
 def data_specification_IEC_61360s_have_definition_at_least_in_english(
-    embedded_data_specifications: List["Embedded_data_specification"],
+    embedded_data_specifications: Sequence["Embedded_data_specification"],
 ) -> bool:
     """
     Check that the :attr:`Data_specification_IEC_61360.definition` is defined
@@ -5038,7 +5038,7 @@ class Key_types(Enum):
     """
 
 
-Generic_fragment_keys: Set[Key_types] = constant_set(
+Generic_fragment_keys: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Fragment_reference,
     ],
@@ -5052,14 +5052,14 @@ assert Key_types.Fragment_reference in Generic_fragment_keys, (
     "in the reference. This is necessary for our simpler formulation of AASd-127."
 )
 
-Generic_globally_identifiables: Set[Key_types] = constant_set(
+Generic_globally_identifiables: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Global_reference,
     ],
     description="Enumeration of different key value types within a key.",
 )
 
-AAS_identifiables: Set[Key_types] = constant_set(
+AAS_identifiables: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Asset_administration_shell,
         Key_types.Concept_description,
@@ -5069,7 +5069,7 @@ AAS_identifiables: Set[Key_types] = constant_set(
     description="Enumeration of different key value types within a key.",
 )
 
-AAS_submodel_elements_as_keys: Set[Key_types] = constant_set(
+AAS_submodel_elements_as_keys: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Annotated_relationship_element,
         Key_types.Basic_event_element,
@@ -5093,7 +5093,7 @@ AAS_submodel_elements_as_keys: Set[Key_types] = constant_set(
 Enumeration of all submodel elements within an asset administration shell.""",
 )
 
-AAS_referable_non_identifiables: Set[Key_types] = constant_set(
+AAS_referable_non_identifiables: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Annotated_relationship_element,
         Key_types.Basic_event_element,
@@ -5117,7 +5117,7 @@ AAS_referable_non_identifiables: Set[Key_types] = constant_set(
     superset_of=[AAS_submodel_elements_as_keys],
 )
 
-AAS_referables: Set[Key_types] = constant_set(
+AAS_referables: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Asset_administration_shell,
         Key_types.Concept_description,
@@ -5149,7 +5149,7 @@ AAS_referables: Set[Key_types] = constant_set(
     superset_of=[AAS_referable_non_identifiables, AAS_identifiables],
 )
 
-Globally_identifiables: Set[Key_types] = constant_set(
+Globally_identifiables: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Global_reference,
         Key_types.Asset_administration_shell,
@@ -5162,7 +5162,7 @@ Enumeration of all referable elements within an asset administration shell""",
     superset_of=[AAS_identifiables, Generic_globally_identifiables],
 )
 
-Fragment_keys: Set[Key_types] = constant_set(
+Fragment_keys: Final[AbstractSet[Key_types]] = constant_set(
     values=[
         Key_types.Annotated_relationship_element,
         Key_types.Basic_event_element,
@@ -5535,49 +5535,57 @@ class Data_type_IEC_61360(Enum):
     """
 
 
-Data_type_IEC_61360_for_property_or_value: Set[Data_type_IEC_61360] = constant_set(
-    values=[
-        Data_type_IEC_61360.Date,
-        Data_type_IEC_61360.String,
-        Data_type_IEC_61360.String_translatable,
-        Data_type_IEC_61360.Integer_measure,
-        Data_type_IEC_61360.Integer_count,
-        Data_type_IEC_61360.Integer_currency,
-        Data_type_IEC_61360.Real_measure,
-        Data_type_IEC_61360.Real_count,
-        Data_type_IEC_61360.Real_currency,
-        Data_type_IEC_61360.Boolean,
-        Data_type_IEC_61360.Rational,
-        Data_type_IEC_61360.Rational_measure,
-        Data_type_IEC_61360.Time,
-        Data_type_IEC_61360.Timestamp,
-    ],
-    description=(
-        "IEC 61360 data types for concept descriptions categorized "
-        "with PROPERTY or VALUE."
-    ),
+Data_type_IEC_61360_for_property_or_value: Final[AbstractSet[Data_type_IEC_61360]] = (
+    constant_set(
+        values=[
+            Data_type_IEC_61360.Date,
+            Data_type_IEC_61360.String,
+            Data_type_IEC_61360.String_translatable,
+            Data_type_IEC_61360.Integer_measure,
+            Data_type_IEC_61360.Integer_count,
+            Data_type_IEC_61360.Integer_currency,
+            Data_type_IEC_61360.Real_measure,
+            Data_type_IEC_61360.Real_count,
+            Data_type_IEC_61360.Real_currency,
+            Data_type_IEC_61360.Boolean,
+            Data_type_IEC_61360.Rational,
+            Data_type_IEC_61360.Rational_measure,
+            Data_type_IEC_61360.Time,
+            Data_type_IEC_61360.Timestamp,
+        ],
+        description=(
+            "IEC 61360 data types for concept descriptions categorized "
+            "with PROPERTY or VALUE."
+        ),
+    )
 )
 
-Data_type_IEC_61360_for_reference: Set[Data_type_IEC_61360] = constant_set(
-    values=[
-        Data_type_IEC_61360.String,
-        Data_type_IEC_61360.IRI,
-        Data_type_IEC_61360.IRDI,
-    ],
-    description=(
-        "IEC 61360 data types for concept descriptions categorized " "with REFERENCE."
-    ),
+Data_type_IEC_61360_for_reference: Final[AbstractSet[Data_type_IEC_61360]] = (
+    constant_set(
+        values=[
+            Data_type_IEC_61360.String,
+            Data_type_IEC_61360.IRI,
+            Data_type_IEC_61360.IRDI,
+        ],
+        description=(
+            "IEC 61360 data types for concept descriptions categorized "
+            "with REFERENCE."
+        ),
+    )
 )
 
-Data_type_IEC_61360_for_document: Set[Data_type_IEC_61360] = constant_set(
-    values=[
-        Data_type_IEC_61360.File,
-        Data_type_IEC_61360.Blob,
-        Data_type_IEC_61360.HTML,
-    ],
-    description=(
-        "IEC 61360 data types for concept descriptions categorized " "with DOCUMENT."
-    ),
+Data_type_IEC_61360_for_document: Final[AbstractSet[Data_type_IEC_61360]] = (
+    constant_set(
+        values=[
+            Data_type_IEC_61360.File,
+            Data_type_IEC_61360.Blob,
+            Data_type_IEC_61360.HTML,
+        ],
+        description=(
+            "IEC 61360 data types for concept descriptions categorized "
+            "with DOCUMENT."
+        ),
+    )
 )
 
 
@@ -5696,7 +5704,7 @@ class Value_list(DBC):
 
 
 # todo: Update Reference as it applies to Part 3b document
-IEC_61360_data_types_with_unit: Set[Data_type_IEC_61360] = constant_set(
+IEC_61360_data_types_with_unit: Final[AbstractSet[Data_type_IEC_61360]] = constant_set(
     values=[
         Data_type_IEC_61360.Integer_measure,
         Data_type_IEC_61360.Real_measure,

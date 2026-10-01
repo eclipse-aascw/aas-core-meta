@@ -4,7 +4,7 @@ import ast
 import io
 import pathlib
 import textwrap
-from typing import Tuple, MutableMapping, List, Final, Set, Union, Sequence
+from typing import Tuple, Mapping, List, Final, Set, Union, Sequence
 
 import aas_core_codegen.common
 import aas_core_codegen.parse
@@ -24,15 +24,15 @@ class MetaModel:
 
     #: Inferred constraints grouped by class
     constraints_by_class: Final[
-        MutableMapping[intermediate.ClassUnion, infer_for_schema.ConstraintsByProperty]
+        Mapping[intermediate.ClassUnion, infer_for_schema.ConstraintsByValue]
     ]
 
     def __init__(
         self,
         atok: asttokens.ASTTokens,
         symbol_table: intermediate.SymbolTable,
-        constraints_by_class: MutableMapping[
-            intermediate.ClassUnion, infer_for_schema.ConstraintsByProperty
+        constraints_by_class: Mapping[
+            intermediate.ClassUnion, infer_for_schema.ConstraintsByValue
         ],
     ) -> None:
         """Initialize with the given values."""
@@ -127,25 +127,6 @@ def load_meta_model(
             message=f"Failed to infer the constraints for the schema "
             f"based on {model_path}",
             errors=[lineno_columner.error_message(error) for error in inference_errors],
-            stderr=writer,
-        )
-
-        raise RuntimeError(writer.getvalue())
-
-    assert constraints_by_class is not None
-    (
-        constraints_by_class,
-        merge_error,
-    ) = aas_core_codegen.infer_for_schema.merge_constraints_with_ancestors(
-        symbol_table=ir_symbol_table, constraints_by_class=constraints_by_class
-    )
-
-    if merge_error is not None:
-        writer = io.StringIO()
-        aas_core_codegen.run.write_error_report(
-            message=f"Failed to infer the constraints for the schema "
-            f"based on {model_path}",
-            errors=[lineno_columner.error_message(merge_error)],
             stderr=writer,
         )
 
@@ -315,8 +296,8 @@ Observed literals: {sorted(literal_set)!r}""")
 
 def assert_all_lists_have_min_length_at_least_one(
     symbol_table: intermediate.SymbolTable,
-    constraints_by_class: MutableMapping[
-        intermediate.ClassUnion, infer_for_schema.ConstraintsByProperty
+    constraints_by_class: Mapping[
+        intermediate.ClassUnion, infer_for_schema.ConstraintsByValue
     ],
 ) -> None:
     """Assert that all lists are constrained to at least one item."""
@@ -329,14 +310,13 @@ def assert_all_lists_have_min_length_at_least_one(
         ):
             continue
 
-        constraints_by_prop = constraints_by_class.get(our_type, None)
+        constraints_by_value = constraints_by_class.get(our_type, None)
 
         for prop in our_type.properties:
-            if isinstance(
-                intermediate.beneath_optional(prop.type_annotation),
-                intermediate.ListTypeAnnotation,
-            ):
-                if constraints_by_prop is None:
+            type_anno = intermediate.beneath_optional(prop.type_annotation)
+
+            if isinstance(type_anno, intermediate.ListTypeAnnotation):
+                if constraints_by_value is None:
                     errors.append(
                         (
                             f"{our_type.name}.{prop.name}",
@@ -345,8 +325,9 @@ def assert_all_lists_have_min_length_at_least_one(
                     )
                     continue
 
-                len_constraints = constraints_by_prop.len_constraints_by_property.get(
-                    prop, None
+                constraints = constraints_by_value.get(type_anno, None)
+                len_constraints = (
+                    constraints.len_constraint if constraints is not None else None
                 )
                 if len_constraints is None:
                     errors.append(
