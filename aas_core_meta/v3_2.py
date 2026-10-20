@@ -1724,6 +1724,11 @@ def submodel_element_has_template_qualifier_in_tree(
             for child in element.annotations
         )
 
+    if isinstance(element, Operation):
+        # NOTE (empwilli):
+        # According to AASd-129 child nodes of Operations are exempt from this rule.
+        pass
+
     return False
 
 
