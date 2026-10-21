@@ -531,7 +531,7 @@ def _is_leap_year(year: str) -> bool:
     # an integer.
     remainder = int(year.lstrip("-")[-4:]) % 400
 
-    if year[:1] == "-":
+    if year.startswith("-"):
         # NOTE (mristin):
         # We shift the years B.C. by one. We add 399 instead of subtracting 1 so
         # that the remainder is never negative, as the modulo of negative numbers
@@ -1133,7 +1133,8 @@ def _is_magnitude_at_most(digits: str, limit: str) -> bool:
     Both :paramref:`digits` and :paramref:`limit` are expected to be decimal digits
     without a sign and without leading zeros. An empty text represents zero.
 
-    We compare the numbers digit by digit, since they might not fit into an integer.
+    We compare the numbers as strings, since they might not fit into an integer.
+    The digits of numbers of equal length are ordered as the numbers themselves.
 
     :param digits: Number to be checked
     :param limit: Largest allowed number
@@ -1142,14 +1143,7 @@ def _is_magnitude_at_most(digits: str, limit: str) -> bool:
     if len(digits) != len(limit):
         return len(digits) < len(limit)
 
-    for i in range(0, len(digits)):
-        digit = int(digits[i : i + 1])
-        limit_digit = int(limit[i : i + 1])
-
-        if digit != limit_digit:
-            return digit < limit_digit
-
-    return True
+    return digits <= limit
 
 
 @verification
@@ -1167,7 +1161,7 @@ def _is_integer_in_range(text: str, max_negative: str, max_positive: str) -> boo
     """
     digits = text.lstrip("+-").lstrip("0")
 
-    if text[:1] == "-":
+    if text.startswith("-"):
         return _is_magnitude_at_most(digits, max_negative)
 
     return _is_magnitude_at_most(digits, max_positive)
@@ -1201,28 +1195,6 @@ Hence, the decimals at or beyond the half-way between the largest float,
 (2 - 2^-23) * 2^127, and 2^128 round to infinity. The half-way is the exact
 integer 2^128 - 2^103, given here in decimal digits.""",
 )
-
-
-@verification
-def _digit_at(head: str, tail: str, index: int) -> int:
-    """
-    Get the digit at :paramref:`index` of :paramref:`head` followed by :paramref:`tail`.
-
-    We can not concatenate the strings, so we index into them as if they were one.
-
-    :param head: First part of the digits
-    :param tail: Second part of the digits
-    :param index: Zero-based index of the digit
-    :returns: The digit at :paramref:`index`, or zero beyond the digits
-    """
-    if index < len(head):
-        return int(head[index : index + 1])
-
-    tail_index = index - len(head)
-    if tail_index < len(tail):
-        return int(tail[tail_index : tail_index + 1])
-
-    return 0
 
 
 @verification
@@ -1285,13 +1257,13 @@ def _is_decimal_magnitude_below(text: str, limit: str) -> bool:
     # Its magnitude then dwarfs the number of the digits in any text, so its sign
     # alone decides.
     if len(exponent_digits) > 15:
-        return exponent_text[:1] == "-"
+        return exponent_text.startswith("-")
 
     exponent: int = 0
     if len(exponent_digits) > 0:
         exponent = int(exponent_digits)
 
-        if exponent_text[:1] == "-":
+        if exponent_text.startswith("-"):
             exponent = -exponent
 
     magnitude = exponent + shift
@@ -1299,17 +1271,12 @@ def _is_decimal_magnitude_below(text: str, limit: str) -> bool:
     if magnitude != len(limit):
         return magnitude < len(limit)
 
-    for i in range(0, len(limit)):
-        digit = _digit_at(head, tail, i)
-        limit_digit = int(limit[i : i + 1])
-
-        if digit != limit_digit:
-            return digit < limit_digit
-
     # NOTE (mristin):
-    # The decimal starts with all the digits of the limit, so it is at least as
-    # large as the limit.
-    return False
+    # Both the decimal and the limit have the same magnitude, so their significant
+    # digits are ordered as the numbers themselves. Trailing zeros do not affect
+    # the order: if the significant digits start with all the digits of the limit,
+    # the decimal is at least as large as the limit, and not below it.
+    return head + tail < limit
 
 
 @verification
