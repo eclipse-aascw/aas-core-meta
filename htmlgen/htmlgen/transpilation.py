@@ -481,10 +481,13 @@ class _Transpiler(
                     ),
                     None,
                 )
-            elif kind is intermediate_type_inference.BuiltinFunctionKind.SET:
+            elif (
+                kind is intermediate_type_inference.BuiltinFunctionKind.SET
+                or kind is intermediate_type_inference.BuiltinFunctionKind.LIST
+            ):
                 return (
                     Stripped(
-                        f"<span class='nb'>set</span>{LPAREN}"
+                        f"<span class='nb'>{func_type.func.name}</span>{LPAREN}"
                         f"{', '.join(args)}{RPAREN}"
                     ),
                     None,
