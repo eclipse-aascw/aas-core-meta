@@ -5389,7 +5389,6 @@ class Value_list(DBC):
         self.value_reference_pairs = value_reference_pairs
 
 
-# todo: Update Reference as it applies to Part 3b document
 IEC_61360_data_types_with_unit: Final[AbstractSet[Data_type_IEC_61360]] = constant_set(
     values=[
         Data_type_IEC_61360.Integer_measure,
