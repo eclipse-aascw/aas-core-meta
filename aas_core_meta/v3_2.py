@@ -1692,8 +1692,6 @@ def submodel_element_has_template_qualifier_in_tree(
     element: "Submodel_element",
 ) -> bool:
     """Check whether :paramref:`element` or its descendants have template qualifiers."""
-    # NOTE (aaronzi):
-    # This implementation will not be transpiled, but is given here as reference.
     if element.qualifiers is not None and any(
         qualifier.kind_or_default() == Qualifier_kind.Template_qualifier
         for qualifier in element.qualifiers
@@ -1737,8 +1735,6 @@ def submodel_elements_have_no_template_qualifiers(
     elements: Sequence["Submodel_element"],
 ) -> bool:
     """Check that :paramref:`elements` have no template qualifiers in their trees."""
-    # NOTE (aaronzi):
-    # This implementation will not be transpiled, but is given here as reference.
     return all(
         not submodel_element_has_template_qualifier_in_tree(element)
         for element in elements
@@ -1750,8 +1746,6 @@ def submodel_element_lists_have_exactly_one_element_in_tree(
     element: "Submodel_element",
 ) -> bool:
     """Recursively check that submodel element lists have exactly one child."""
-    # NOTE (aaronzi):
-    # This implementation will not be transpiled, but is given here as reference.
     if isinstance(element, Submodel_element_list):
         return (
             element.value is not None
@@ -1788,8 +1782,6 @@ def submodel_element_lists_in_submodel_elements_have_exactly_one_element(
     elements: Sequence["Submodel_element"],
 ) -> bool:
     """Check that all submodel element lists among :paramref:`elements` have one item."""
-    # NOTE (aaronzi):
-    # This implementation will not be transpiled, but is given here as reference.
     return all(
         submodel_element_lists_have_exactly_one_element_in_tree(element)
         for element in elements
@@ -4877,18 +4869,6 @@ class Capability(Submodel_element):
         )
 
 
-# NOTE (mristin):
-# We make the following verification functions implementation-specific since the casts
-# are very clumsy to formalize and transpile in a readable way across languages.
-# For example, since Python does not have a null-coalescing operator, formalizing
-# the constraints such as :constraintref:`AASc-3a-004` would involve walrus operator and
-# would result in an unreadable invariant.
-#
-# Therefore, we decided to encapsulate the logic in these few functions and estimate
-# the maintenance effort to dwarf the effort needed to get this right in
-# aas-core-codegen.
-
-
 @verification
 def data_specification_IEC_61360s_for_property_or_value_have_appropriate_data_type(
     embedded_data_specifications: Sequence["Embedded_data_specification"],
@@ -4897,8 +4877,6 @@ def data_specification_IEC_61360s_for_property_or_value_have_appropriate_data_ty
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined
     appropriately for all data specifications whose content is given as IEC 61360.
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
     return all(
         not (
             isinstance(
@@ -4925,8 +4903,6 @@ def data_specification_IEC_61360s_for_reference_have_appropriate_data_type(
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined
     appropriately for all data specifications whose content is given as IEC 61360.
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
     return all(
         not (
             isinstance(
@@ -4953,8 +4929,6 @@ def data_specification_IEC_61360s_for_document_have_appropriate_data_type(
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined
     appropriately for all data specifications whose content is given as IEC 61360.
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
     return all(
         not (
             isinstance(
@@ -4981,8 +4955,6 @@ def data_specification_IEC_61360s_have_data_type(
     Check that the :attr:`Data_specification_IEC_61360.data_type` is defined for all
     data specifications whose content is given as IEC 61360.
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
     return all(
         not (
             isinstance(
@@ -5003,8 +4975,6 @@ def data_specification_IEC_61360s_have_value(
     Check that the :attr:`Data_specification_IEC_61360.value` is defined
     for all data specifications whose content is given as IEC 61360.
     """
-    # NOTE (mristin):
-    # This implementation will not be transpiled, but is given here as reference.
     return all(
         not (
             isinstance(
