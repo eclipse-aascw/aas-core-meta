@@ -1517,11 +1517,6 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-item" href="DigitAt.html">
-            DigitAt
-          </a>
-        </li>
-        <li class="nav-item">
           <a class="nav-item" href="ExtensionNamesAreUnique.html">
             ExtensionNamesAreUnique
           </a>
@@ -1988,7 +1983,7 @@
       <h2>Code</h2>
       <div class='highlight'><pre><span class='n'>remainder</span> <span class='o'>=</span> <span class='nb'>int</span><span class='p'>(</span><span class='n'>year</span><span class='o'>.</span><span class='n'>lstrip</span><span class='p'>(</span><span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>)</span><span class='p'>[</span><span class='o'>-</span><span class='mi'>4</span><span class='p'>:</span><span class='p'>]</span><span class='p'>)</span> <span class='o'>%</span> <span class='mi'>400</span><span class='w'>
 </span><span class='w'>
-</span><span class='k'>if</span> <span class='n'>year</span><span class='p'>[</span><span class='p'>:</span><span class='mi'>1</span><span class='p'>]</span> <span class='o'>==</span> <span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>:</span><span class='w'>
+</span><span class='k'>if</span> <span class='n'>year</span><span class='o'>.</span><span class='n'>startswith</span><span class='p'>(</span><span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>)</span><span class='p'>:</span><span class='w'>
 </span>    <span class='c1'># NOTE (mristin):</span><span class='w'>
 </span>    <span class='c1'># We shift the years B.C. by one. We add 399 instead of subtracting 1 so</span><span class='w'>
 </span>    <span class='c1'># that the remainder is never negative, as the modulo of negative numbers</span><span class='w'>

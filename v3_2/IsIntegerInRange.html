@@ -1517,11 +1517,6 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-item" href="DigitAt.html">
-            DigitAt
-          </a>
-        </li>
-        <li class="nav-item">
           <a class="nav-item" href="ExtensionNamesAreUnique.html">
             ExtensionNamesAreUnique
           </a>
@@ -1989,7 +1984,7 @@
       <h2>Code</h2>
       <div class='highlight'><pre><span class='n'>digits</span> <span class='o'>=</span> <span class='n'>text</span><span class='o'>.</span><span class='n'>lstrip</span><span class='p'>(</span><span class='s2'>&quot;</span><span class='s2'>+-</span><span class='s2'>&quot;</span><span class='p'>)</span><span class='o'>.</span><span class='n'>lstrip</span><span class='p'>(</span><span class='s2'>&quot;</span><span class='s2'>0</span><span class='s2'>&quot;</span><span class='p'>)</span><span class='w'>
 </span><span class='w'>
-</span><span class='k'>if</span> <span class='n'>text</span><span class='p'>[</span><span class='p'>:</span><span class='mi'>1</span><span class='p'>]</span> <span class='o'>==</span> <span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>:</span><span class='w'>
+</span><span class='k'>if</span> <span class='n'>text</span><span class='o'>.</span><span class='n'>startswith</span><span class='p'>(</span><span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>)</span><span class='p'>:</span><span class='w'>
 </span>    <span class='k'>return</span> <span class='n'><a href='IsMagnitudeAtMost.html'>_is_magnitude_at_most</a></span><span class='p'>(</span><span class='n'>digits</span><span class='p'>,</span> <span class='n'>max_negative</span><span class='p'>)</span><span class='w'>
 </span><span class='w'>
 </span><span class='k'>return</span> <span class='n'><a href='IsMagnitudeAtMost.html'>_is_magnitude_at_most</a></span><span class='p'>(</span><span class='n'>digits</span><span class='p'>,</span> <span class='n'>max_positive</span><span class='p'>)</span><span class='w'>

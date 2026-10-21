@@ -1517,11 +1517,6 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-item" href="DigitAt.html">
-            DigitAt
-          </a>
-        </li>
-        <li class="nav-item">
           <a class="nav-item" href="ExtensionNamesAreUnique.html">
             ExtensionNamesAreUnique
           </a>
@@ -1961,7 +1956,8 @@
             without a sign and without leading zeros. An empty text represents zero.
           </p>
           <p>
-            We compare the numbers digit by digit, since they might not fit into an integer.
+            We compare the numbers as strings, since they might not fit into an integer.
+            The digits of numbers of equal length are ordered as the numbers themselves.
           </p>
         </div>
         <dl class="args-and-return">
@@ -1989,14 +1985,7 @@
       <div class='highlight'><pre><span class='k'>if</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>digits</span><span class='p'>)</span> <span class='o'>!=</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>limit</span><span class='p'>)</span><span class='p'>:</span><span class='w'>
 </span>    <span class='k'>return</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>digits</span><span class='p'>)</span> <span class='o'>&lt;</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>limit</span><span class='p'>)</span><span class='w'>
 </span><span class='w'>
-</span><span class='k'>for</span> <span class='n'>i</span> <span class='ow'>in</span> <span class='nb'>range</span><span class='p'>(</span><span class='mi'>0</span><span class='p'>,</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>digits</span><span class='p'>)</span><span class='p'>)</span><span class='p'>:</span><span class='w'>
-</span>    <span class='n'>digit</span> <span class='o'>=</span> <span class='nb'>int</span><span class='p'>(</span><span class='n'>digits</span><span class='p'>[</span><span class='n'>i</span> <span class='p'>:</span> <span class='n'>i</span> <span class='o'>+</span> <span class='mi'>1</span><span class='p'>]</span><span class='p'>)</span><span class='w'>
-</span>    <span class='n'>limit_digit</span> <span class='o'>=</span> <span class='nb'>int</span><span class='p'>(</span><span class='n'>limit</span><span class='p'>[</span><span class='n'>i</span> <span class='p'>:</span> <span class='n'>i</span> <span class='o'>+</span> <span class='mi'>1</span><span class='p'>]</span><span class='p'>)</span><span class='w'>
-</span><span class='w'>
-</span>    <span class='k'>if</span> <span class='n'>digit</span> <span class='o'>!=</span> <span class='n'>limit_digit</span><span class='p'>:</span><span class='w'>
-</span>        <span class='k'>return</span> <span class='n'>digit</span> <span class='o'>&lt;</span> <span class='n'>limit_digit</span><span class='w'>
-</span><span class='w'>
-</span><span class='k'>return</span> <span class='kc'>True</span><span class='w'>
+</span><span class='k'>return</span> <span class='n'>digits</span> <span class='o'>&lt;</span><span class='o'>=</span> <span class='n'>limit</span><span class='w'>
 </span></pre></div>
     </div>
   </div>

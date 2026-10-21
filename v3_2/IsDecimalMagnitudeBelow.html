@@ -1517,11 +1517,6 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-item" href="DigitAt.html">
-            DigitAt
-          </a>
-        </li>
-        <li class="nav-item">
           <a class="nav-item" href="ExtensionNamesAreUnique.html">
             ExtensionNamesAreUnique
           </a>
@@ -2035,13 +2030,13 @@
 </span><span class='c1'># Its magnitude then dwarfs the number of the digits in any text, so its sign</span><span class='w'>
 </span><span class='c1'># alone decides.</span><span class='w'>
 </span><span class='k'>if</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>exponent_digits</span><span class='p'>)</span> <span class='o'>&gt;</span> <span class='mi'>15</span><span class='p'>:</span><span class='w'>
-</span>    <span class='k'>return</span> <span class='n'>exponent_text</span><span class='p'>[</span><span class='p'>:</span><span class='mi'>1</span><span class='p'>]</span> <span class='o'>==</span> <span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='w'>
+</span>    <span class='k'>return</span> <span class='n'>exponent_text</span><span class='o'>.</span><span class='n'>startswith</span><span class='p'>(</span><span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>)</span><span class='w'>
 </span><span class='w'>
 </span><span class='n'>exponent</span><span class='p'>:</span> <span class='nb'>int</span> <span class='o'>=</span> <span class='mi'>0</span><span class='w'>
 </span><span class='k'>if</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>exponent_digits</span><span class='p'>)</span> <span class='o'>&gt;</span> <span class='mi'>0</span><span class='p'>:</span><span class='w'>
 </span>    <span class='n'>exponent</span> <span class='o'>=</span> <span class='nb'>int</span><span class='p'>(</span><span class='n'>exponent_digits</span><span class='p'>)</span><span class='w'>
 </span><span class='w'>
-</span>    <span class='k'>if</span> <span class='n'>exponent_text</span><span class='p'>[</span><span class='p'>:</span><span class='mi'>1</span><span class='p'>]</span> <span class='o'>==</span> <span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>:</span><span class='w'>
+</span>    <span class='k'>if</span> <span class='n'>exponent_text</span><span class='o'>.</span><span class='n'>startswith</span><span class='p'>(</span><span class='s2'>&quot;</span><span class='s2'>-</span><span class='s2'>&quot;</span><span class='p'>)</span><span class='p'>:</span><span class='w'>
 </span>        <span class='n'>exponent</span> <span class='o'>=</span> <span class='o'>-</span><span class='n'>exponent</span><span class='w'>
 </span><span class='w'>
 </span><span class='n'>magnitude</span> <span class='o'>=</span> <span class='n'>exponent</span> <span class='o'>+</span> <span class='n'>shift</span><span class='w'>
@@ -2049,17 +2044,12 @@
 </span><span class='k'>if</span> <span class='n'>magnitude</span> <span class='o'>!=</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>limit</span><span class='p'>)</span><span class='p'>:</span><span class='w'>
 </span>    <span class='k'>return</span> <span class='n'>magnitude</span> <span class='o'>&lt;</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>limit</span><span class='p'>)</span><span class='w'>
 </span><span class='w'>
-</span><span class='k'>for</span> <span class='n'>i</span> <span class='ow'>in</span> <span class='nb'>range</span><span class='p'>(</span><span class='mi'>0</span><span class='p'>,</span> <span class='nb'>len</span><span class='p'>(</span><span class='n'>limit</span><span class='p'>)</span><span class='p'>)</span><span class='p'>:</span><span class='w'>
-</span>    <span class='n'>digit</span> <span class='o'>=</span> <span class='n'><a href='DigitAt.html'>_digit_at</a></span><span class='p'>(</span><span class='n'>head</span><span class='p'>,</span> <span class='n'>tail</span><span class='p'>,</span> <span class='n'>i</span><span class='p'>)</span><span class='w'>
-</span>    <span class='n'>limit_digit</span> <span class='o'>=</span> <span class='nb'>int</span><span class='p'>(</span><span class='n'>limit</span><span class='p'>[</span><span class='n'>i</span> <span class='p'>:</span> <span class='n'>i</span> <span class='o'>+</span> <span class='mi'>1</span><span class='p'>]</span><span class='p'>)</span><span class='w'>
-</span><span class='w'>
-</span>    <span class='k'>if</span> <span class='n'>digit</span> <span class='o'>!=</span> <span class='n'>limit_digit</span><span class='p'>:</span><span class='w'>
-</span>        <span class='k'>return</span> <span class='n'>digit</span> <span class='o'>&lt;</span> <span class='n'>limit_digit</span><span class='w'>
-</span><span class='w'>
 </span><span class='c1'># NOTE (mristin):</span><span class='w'>
-</span><span class='c1'># The decimal starts with all the digits of the limit, so it is at least as</span><span class='w'>
-</span><span class='c1'># large as the limit.</span><span class='w'>
-</span><span class='k'>return</span> <span class='kc'>False</span><span class='w'>
+</span><span class='c1'># Both the decimal and the limit have the same magnitude, so their significant</span><span class='w'>
+</span><span class='c1'># digits are ordered as the numbers themselves. Trailing zeros do not affect</span><span class='w'>
+</span><span class='c1'># the order: if the significant digits start with all the digits of the limit,</span><span class='w'>
+</span><span class='c1'># the decimal is at least as large as the limit, and not below it.</span><span class='w'>
+</span><span class='k'>return</span> <span class='n'>head</span> <span class='o'>+</span> <span class='n'>tail</span> <span class='o'>&lt;</span> <span class='n'>limit</span><span class='w'>
 </span></pre></div>
     </div>
   </div>
