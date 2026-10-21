@@ -1,5 +1,6 @@
 """Test the functions and assertions of v3_2.py meta-model."""
 
+import datetime
 import pathlib
 import unittest
 from typing import Dict, List, Set, Optional, Tuple
@@ -918,6 +919,281 @@ class Test_is_xs_date_time_UTC(unittest.TestCase):
 
     def test_not_UTC(self) -> None:
         assert not v3_2.is_xs_date_time_UTC("2020-02-29T12:34:56+01:00")
+
+
+class Test_date_time_UTC_less(unittest.TestCase):
+    def assert_less(self, earlier: str, later: str) -> None:
+        self.assertIs(True, v3_2.date_time_UTC_less(earlier, later), (earlier, later))
+        self.assertIs(False, v3_2.date_time_UTC_less(later, earlier), (later, earlier))
+
+    def assert_equal(self, first: str, second: str) -> None:
+        self.assertIs(False, v3_2.date_time_UTC_less(first, second), (first, second))
+        self.assertIs(False, v3_2.date_time_UTC_less(second, first), (second, first))
+
+    def test_each_part_decides(self) -> None:
+        self.assert_less("2022-04-01T01:02:03Z", "2023-04-01T01:02:03Z")
+        self.assert_less("2022-04-01T01:02:03Z", "2022-05-01T01:02:03Z")
+        self.assert_less("2022-04-01T01:02:03Z", "2022-04-02T01:02:03Z")
+        self.assert_less("2022-04-01T01:02:03Z", "2022-04-01T02:02:03Z")
+        self.assert_less("2022-04-01T01:02:03Z", "2022-04-01T01:03:03Z")
+        self.assert_less("2022-04-01T01:02:03Z", "2022-04-01T01:02:04Z")
+        self.assert_less("2022-04-01T01:02:03.1Z", "2022-04-01T01:02:03.2Z")
+
+    def test_higher_part_dominates(self) -> None:
+        self.assert_less("2022-12-31T23:59:59.9Z", "2023-01-01T00:00:00Z")
+        self.assert_less("2022-04-01T23:59:59Z", "2022-04-02T00:00:00Z")
+
+    def test_equal(self) -> None:
+        self.assert_equal("2022-04-01T01:02:03Z", "2022-04-01T01:02:03Z")
+
+    def test_time_zones_of_UTC_are_equal(self) -> None:
+        self.assert_equal("2022-04-01T01:02:03Z", "2022-04-01T01:02:03+00:00")
+        self.assert_equal("2022-04-01T01:02:03-00:00", "2022-04-01T01:02:03+00:00")
+        self.assert_less("2022-04-01T01:02:03.5-00:00", "2022-04-01T01:02:03.6Z")
+
+    def test_long_years(self) -> None:
+        self.assert_less("9999-04-01T01:02:03Z", "10000-04-01T01:02:03Z")
+        self.assert_less("10000-04-01T01:02:03Z", "10001-04-01T01:02:03Z")
+        self.assert_less(
+            "999999999999998-04-01T01:02:03Z", "999999999999999-04-01T01:02:03Z"
+        )
+        self.assert_less(
+            "-999999999999999-04-01T01:02:03Z", "-999999999999998-04-01T01:02:03Z"
+        )
+
+    def test_years_with_more_than_15_digits_are_not_compared(self) -> None:
+        for that, other in (
+            ("1000000000000000-04-01T01:02:03Z", "2022-04-01T01:02:03Z"),
+            ("2022-04-01T01:02:03Z", "1000000000000000-04-01T01:02:03Z"),
+            ("-1000000000000000-04-01T01:02:03Z", "2022-04-01T01:02:03Z"),
+        ):
+            self.assertIsNone(v3_2.date_time_UTC_less(that, other), (that, other))
+
+    def test_years_BC(self) -> None:
+        self.assert_less("-0001-04-01T01:02:03Z", "0001-04-01T01:02:03Z")
+        self.assert_less("-0002-04-01T01:02:03Z", "-0001-04-01T01:02:03Z")
+        self.assert_less("-10000-04-01T01:02:03Z", "-9999-04-01T01:02:03Z")
+        self.assert_less("-0001-04-01T01:02:03Z", "-0001-04-02T01:02:03Z")
+        self.assert_equal("-0001-04-01T01:02:03Z", "-0001-04-01T01:02:03Z")
+
+    def test_long_fractions(self) -> None:
+        self.assert_less(
+            "2022-04-01T01:02:03.5Z", "2022-04-01T01:02:03.50000000000000000001Z"
+        )
+        self.assert_less(
+            "2022-04-01T01:02:03.49999999999999999999Z", "2022-04-01T01:02:03.5Z"
+        )
+        self.assert_less(
+            "2022-04-01T01:02:03Z", "2022-04-01T01:02:03.00000000000000000001Z"
+        )
+
+    def test_trailing_zeros_in_fractions(self) -> None:
+        self.assert_equal("2022-04-01T01:02:03Z", "2022-04-01T01:02:03.000Z")
+        self.assert_equal("2022-04-01T01:02:03.5Z", "2022-04-01T01:02:03.50000Z")
+
+    def test_end_of_day(self) -> None:
+        self.assert_less("2022-04-01T23:59:59.9Z", "2022-04-01T24:00:00Z")
+        self.assert_less("2022-04-01T24:00:00Z", "2022-04-02T00:00:01Z")
+        self.assert_less("2022-04-01T00:00:00Z", "2022-04-01T24:00:00Z")
+        self.assert_equal("2022-04-01T24:00:00Z", "2022-04-01T24:00:00.000Z")
+
+        # The start of the next day equals the end of the previous day.
+        self.assertIs(
+            False,
+            v3_2.date_time_UTC_less("2022-04-02T00:00:00Z", "2022-04-01T24:00:00Z"),
+        )
+
+    def test_end_of_day_equals_start_of_next_day(self) -> None:
+        for that, other in (
+            # Within a month
+            ("2022-04-01T24:00:00Z", "2022-04-02T00:00:00Z"),
+            ("2022-04-01T24:00:00.000Z", "2022-04-02T00:00:00.000+00:00"),
+            # End of a month with 30 and 31 days
+            ("2022-04-30T24:00:00Z", "2022-05-01T00:00:00Z"),
+            ("2022-05-31T24:00:00Z", "2022-06-01T00:00:00Z"),
+            # End of February in a leap year and in a common year
+            ("2020-02-28T24:00:00Z", "2020-02-29T00:00:00Z"),
+            ("2020-02-29T24:00:00Z", "2020-03-01T00:00:00Z"),
+            ("2022-02-28T24:00:00Z", "2022-03-01T00:00:00Z"),
+            ("2000-02-29T24:00:00Z", "2000-03-01T00:00:00Z"),
+            ("1900-02-28T24:00:00Z", "1900-03-01T00:00:00Z"),
+            # End of a year
+            ("2022-12-31T24:00:00Z", "2023-01-01T00:00:00Z"),
+            ("0999-12-31T24:00:00Z", "1000-01-01T00:00:00Z"),
+            ("9999-12-31T24:00:00Z", "10000-01-01T00:00:00Z"),
+            ("123456789999999-12-31T24:00:00Z", "123456790000000-01-01T00:00:00Z"),
+            # End of a year B.C., where there is no year zero
+            ("-0002-12-31T24:00:00Z", "-0001-01-01T00:00:00Z"),
+            ("-0001-12-31T24:00:00Z", "0001-01-01T00:00:00Z"),
+            ("-10000-12-31T24:00:00Z", "-9999-01-01T00:00:00Z"),
+            # End of February in the leap year 1 B.C.
+            ("-0001-02-29T24:00:00Z", "-0001-03-01T00:00:00Z"),
+        ):
+            self.assert_equal(that, other)
+
+    def test_end_of_day_before_start_of_day_after_next(self) -> None:
+        for that, other in (
+            ("2022-04-01T24:00:00Z", "2022-04-03T00:00:00Z"),
+            ("2022-04-30T24:00:00Z", "2022-05-02T00:00:00Z"),
+            ("2022-02-28T24:00:00Z", "2022-03-02T00:00:00Z"),
+            ("2022-12-31T24:00:00Z", "2023-01-02T00:00:00Z"),
+            ("2022-12-31T24:00:00Z", "2024-01-01T00:00:00Z"),
+            ("-0001-12-31T24:00:00Z", "0002-01-01T00:00:00Z"),
+            ("-0002-12-31T24:00:00Z", "0001-01-01T00:00:00Z"),
+            ("9999-12-31T24:00:00Z", "10001-01-01T00:00:00Z"),
+            # Same day of the next month or year is not the next day
+            ("2022-04-01T24:00:00Z", "2022-05-02T00:00:00Z"),
+            ("2022-04-01T24:00:00Z", "2023-04-02T00:00:00Z"),
+        ):
+            self.assert_less(that, other)
+
+    def test_end_of_day_against_datetime(self) -> None:
+        dates = (
+            [
+                datetime.date(1, 1, 1) + datetime.timedelta(days=offset)
+                for offset in (0, 30, 58, 364)
+            ]
+            + [
+                datetime.date(year, month, day)
+                for year in (1900, 1999, 2000, 2020, 2022)
+                for month, day in (
+                    (2, 27),
+                    (2, 28),
+                    (2, 29),
+                    (3, 1),
+                    (4, 30),
+                    (12, 30),
+                    (12, 31),
+                )
+                if not (month == 2 and day == 29 and year in (1900, 1999, 2022))
+            ]
+            + [datetime.date(year, 1, 1) for year in (1901, 2000, 2001, 2021, 2023)]
+        )
+
+        for end_date in dates:
+            for start_date in dates:
+                end_of_day = f"{end_date.isoformat()}T24:00:00Z"
+                start_of_day = f"{start_date.isoformat()}T00:00:00Z"
+
+                # NOTE (mristin):
+                # The end of a day is the start of the next day.
+                next_date = end_date + datetime.timedelta(days=1)
+
+                self.assertIs(
+                    next_date < start_date,
+                    v3_2.date_time_UTC_less(end_of_day, start_of_day),
+                    (end_of_day, start_of_day),
+                )
+
+                self.assertIs(
+                    start_date < next_date,
+                    v3_2.date_time_UTC_less(start_of_day, end_of_day),
+                    (start_of_day, end_of_day),
+                )
+
+    def test_invalid(self) -> None:
+        valid = "2022-04-01T01:02:03Z"
+
+        for invalid in (
+            "",
+            "2022-04-01",
+            "2022-04-01T01:02:03",
+            "2022-04-01T01:02:03+01:00",
+            "2022-02-29T01:02:03Z",
+            "0000-04-01T01:02:03Z",
+            "2022-04-01T24:00:01Z",
+            "2022-04-01T24:00:00.1Z",
+        ):
+            self.assertIsNone(v3_2.date_time_UTC_less(invalid, valid), invalid)
+            self.assertIsNone(v3_2.date_time_UTC_less(valid, invalid), invalid)
+
+    def test_against_datetime(self) -> None:
+        texts = [
+            "0001-01-01T00:00:00Z",
+            "0999-12-31T23:59:59.999999Z",
+            "1970-01-01T00:00:00Z",
+            "1999-12-31T23:59:59.5Z",
+            "2000-01-01T00:00:00Z",
+            "2000-01-01T00:00:00.000001Z",
+            "2020-02-29T12:34:56.789Z",
+            "2020-02-29T12:34:56.78Z",
+            "2020-03-01T12:34:56Z",
+            "9999-12-31T23:59:59.999999Z",
+        ]
+
+        def parse(text: str) -> datetime.datetime:
+            # NOTE (mristin):
+            # We do not use ``datetime.datetime.fromisoformat``, as it accepts
+            # neither the suffix ``Z`` nor the fractions of other than three or
+            # six digits before Python 3.11.
+            if "." in text:
+                return datetime.datetime.strptime(text, "%Y-%m-%dT%H:%M:%S.%fZ")
+
+            return datetime.datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ")
+
+        for that in texts:
+            for other in texts:
+                expected = parse(that) < parse(other)
+
+                self.assertIs(
+                    expected, v3_2.date_time_UTC_less(that, other), (that, other)
+                )
+
+    def test_or_invalid_if_less(self) -> None:
+        assert v3_2.date_time_UTC_less_or_invalid(
+            "2022-04-01T01:02:03Z", "2022-04-01T01:02:04Z"
+        )
+
+    def test_or_invalid_if_equal_or_after(self) -> None:
+        assert not v3_2.date_time_UTC_less_or_invalid(
+            "2022-04-01T01:02:03Z", "2022-04-01T01:02:03Z"
+        )
+        assert not v3_2.date_time_UTC_less_or_invalid(
+            "2022-04-01T01:02:04Z", "2022-04-01T01:02:03Z"
+        )
+
+        # NOTE (mristin):
+        # The end of April 1st is the same instant as the start of April 2nd,
+        # so it is not before it.
+        assert not v3_2.date_time_UTC_less_or_invalid(
+            "2022-04-01T24:00:00Z", "2022-04-02T00:00:00Z"
+        )
+
+    def test_or_invalid_if_invalid(self) -> None:
+        # NOTE (mristin):
+        # The order of an invalid date-time is meaningless. The invalid date-times
+        # are reported by the invariants of ``Date_time_UTC``, so the function
+        # holds for them, and we do not report them twice. We put the invalid
+        # date-time on either side of the valid one, as either may be invalid.
+        valid = "2022-04-01T01:02:03Z"
+
+        for invalid in (
+            # Empty
+            "",
+            # Only the date, without the time
+            "2022-04-01",
+            # Without the time zone
+            "2022-04-01T01:02:03",
+            # Time zone other than UTC
+            "2022-04-01T01:02:03+01:00",
+            # February 29th in a year which is not a leap year
+            "2022-02-29T01:02:03Z",
+            "1900-02-29T01:02:03Z",
+            # April has only 30 days
+            "2022-04-31T01:02:03Z",
+            # Day zero, month 13 and hour 25 do not match the pattern
+            "2022-04-00T01:02:03Z",
+            "2022-13-01T01:02:03Z",
+            "2022-04-01T25:02:03Z",
+            # The end of a day allows no minutes, seconds or fractions
+            "2022-04-01T24:00:01Z",
+            "2022-04-01T24:00:00.1Z",
+            # There is no year zero
+            "0000-04-01T01:02:03Z",
+            "-0000-04-01T01:02:03Z",
+        ):
+            assert v3_2.date_time_UTC_less_or_invalid(invalid, valid), invalid
+            assert v3_2.date_time_UTC_less_or_invalid(valid, invalid), invalid
 
 
 class Test_is_xs_g_month_day(unittest.TestCase):

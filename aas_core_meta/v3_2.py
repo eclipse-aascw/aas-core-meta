@@ -659,6 +659,182 @@ def is_xs_date_time(text: str) -> bool:
     return matches_xs_date_time(text) and _is_prefix_valid_date(text)
 
 
+@verification
+def _fraction_of_date_time_UTC(text: str) -> str:
+    """
+    Get the digits of the fraction of a second in :paramref:`text`.
+
+    The :paramref:`text` is expected to be a valid ``xs:dateTime`` with the time
+    zone fixed to UTC, *i.e.*, it ends with ``Z``, ``+00:00`` or ``-00:00``.
+
+    :param text: Date-time to be parsed
+    :returns: The digits after the decimal point, or an empty text if there are none
+    """
+    point = text.find(".")
+    if point == -1:
+        return ""
+
+    if text.endswith("Z"):
+        return text[point + 1 : -1]
+
+    return text[point + 1 : -6]
+
+
+@verification
+def _is_next_day(text: str, next_text: str) -> bool:
+    """
+    Check that the date of :paramref:`next_text` is the day after the date of
+    :paramref:`text`.
+
+    Both :paramref:`text` and :paramref:`next_text` are expected to start with
+    a valid date matching the pattern ``-?YYYY-MM-DD``, where the year can have
+    more than four digits, but has to fit into an integer. Whatever follows
+    the date, such as the time or the time zone, is ignored.
+
+    :param text: Text starting with the date to be incremented
+    :param next_text: Text starting with the date expected to follow
+    :returns: True if the date of :paramref:`next_text` follows the date of
+        :paramref:`text`
+    """
+    # NOTE (mristin):
+    # We start searching from the second character so that we skip the minus
+    # of a year B.C.
+    month_start = text.find("-", 1) + 1
+    next_month_start = next_text.find("-", 1) + 1
+
+    year_text = text[: month_start - 1]
+
+    year = int(year_text)
+    month = int(text[month_start : month_start + 2])
+    day = int(text[month_start + 3 : month_start + 5])
+
+    next_year = int(next_text[: next_month_start - 1])
+    next_month = int(next_text[next_month_start : next_month_start + 2])
+    next_day = int(next_text[next_month_start + 3 : next_month_start + 5])
+
+    if _is_day_of_month_valid(_is_leap_year(year_text), month, day + 1):
+        return year == next_year and month == next_month and day + 1 == next_day
+
+    if next_day != 1:
+        return False
+
+    if month < 12:
+        return year == next_year and month + 1 == next_month
+
+    # NOTE (mristin):
+    # There is no year zero, see the note at
+    # https://www.w3.org/TR/xmlschema-2/#dateTime, so the year 1 B.C., ``-0001``,
+    # is followed by the year 1, ``0001``.
+    return next_month == 1 and (
+        next_year == year + 1 or (year == -1 and next_year == 1)
+    )
+
+
+@verification
+def date_time_UTC_less(that: str, other: str) -> Optional[bool]:
+    """
+    Check that the date-time :paramref:`that` is before :paramref:`other`.
+
+    We compare the years as integers, and the rest of the texts part by part as
+    strings, since the fraction of a second can be arbitrarily long.
+
+    We do not compare the years with more than 15 digits, as they do not safely fit
+    into an integer. Such years are valid in ``xs:dateTime``, but not realistic.
+
+    The end of a day, ``24:00:00``, is the same instant as the start of the next day,
+    see the note at https://www.w3.org/TR/xmlschema-2/#dateTime.
+
+    :param that: Date-time which is expected to come first
+    :param other: Date-time which is expected to come later
+    :returns:
+        True if :paramref:`that` is before :paramref:`other`, False if not, and
+        None if either of them is not a valid ``xs:dateTime`` in UTC, or if
+        either of their years has more than 15 digits
+    """
+    if not is_xs_date_time_UTC(that) or not is_xs_date_time_UTC(other):
+        return None
+
+    # NOTE (mristin):
+    # We start searching from the second character so that we skip the minus
+    # of a year B.C.
+    that_month_start = that.find("-", 1) + 1
+    other_month_start = other.find("-", 1) + 1
+
+    that_year_text = that[: that_month_start - 1]
+    other_year_text = other[: other_month_start - 1]
+
+    if len(that_year_text.lstrip("-")) > 15 or len(other_year_text.lstrip("-")) > 15:
+        return None
+
+    # NOTE (mristin):
+    # The years B.C. are negative, so they are ordered as the integers, even
+    # though there is no year zero in between.
+    that_year = int(that_year_text)
+    other_year = int(other_year_text)
+
+    # NOTE (mristin):
+    # The month, the day, the hours, the minutes and the whole seconds, given as
+    # ``MM-DDTHH:MM:SS``, are of fixed width, so they are ordered as the texts.
+    that_rest = that[that_month_start : that_month_start + 14]
+    other_rest = other[other_month_start : other_month_start + 14]
+
+    that_fraction = _fraction_of_date_time_UTC(that).rstrip("0")
+    other_fraction = _fraction_of_date_time_UTC(other).rstrip("0")
+
+    less = False
+
+    if that_year != other_year:
+        less = that_year < other_year
+
+    elif that_rest != other_rest:
+        less = that_rest < other_rest
+
+    else:
+        # NOTE (mristin):
+        # The fractions are stripped of the trailing zeros, so they are ordered
+        # as the texts.
+        less = that_fraction < other_fraction
+
+    # NOTE (mristin):
+    # The end of a day sorts after all the other times of the same day, and before
+    # all the times of the later days, which is correct except for the start of
+    # the next day, as the two are the same instant. If :paramref:`other` is
+    # the end of a day instead, it sorts correctly, as the start of the next day
+    # comes after all the times of that day.
+    if (
+        less
+        and that[that_month_start + 6 : that_month_start + 8] == "24"
+        and other[other_month_start + 6 : other_month_start + 14] == "00:00:00"
+        and other_fraction == ""
+    ):
+        return not _is_next_day(that, other)
+
+    return less
+
+
+@verification
+def date_time_UTC_less_or_invalid(that: str, other: str) -> bool:
+    """
+    Check that the date-time :paramref:`that` is before :paramref:`other`, unless
+    either of them is invalid.
+
+    The invalid date-times are reported by the invariants of
+    :class:`Date_time_UTC`, so that we do not report them twice.
+    See :func:`date_time_UTC_less`.
+
+    :param that: Date-time which is expected to come first
+    :param other: Date-time which is expected to come later
+    :returns:
+        True if :paramref:`that` is before :paramref:`other`, or if either of
+        them is not a valid ``xs:dateTime`` in UTC
+    """
+    less = date_time_UTC_less(that, other)
+    if less is None:
+        return True
+
+    return less
+
+
 # noinspection SpellCheckingInspection
 @verification
 def matches_xs_decimal(text: str) -> bool:
@@ -2534,6 +2710,12 @@ class Has_data_specification(DBC):
     "Constraint AASd-005: If version is not specified, revision shall also be "
     "unspecified. This means that a revision requires a version. If there is "
     "no version, there is no revision. Revision is optional."
+)
+@invariant(
+    lambda self:
+    not (self.created_at is not None and self.updated_at is not None)
+    or date_time_UTC_less_or_invalid(self.created_at, self.updated_at),
+    "Created-at must be before updated-at."
 )
 # fmt: on
 class Administrative_information(Has_data_specification):
