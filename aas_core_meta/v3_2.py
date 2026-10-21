@@ -6357,12 +6357,192 @@ class Lang_string_definition_type_IEC_61360(Abstract_lang_string, DBC):
         Abstract_lang_string.__init__(self, language=language, text=text)
 
 
+@invariant(
+    lambda self: len(self.text) <= 256,
+    "String shall have a maximum length of 256 characters.",
+)
+class Lang_string_uom(Abstract_lang_string, DBC):
+    """
+    String with length 256 maximum and minimum 1 characters and with language tags.
+    """
+
+    def __init__(
+        self, language: BCP_47_language_tag, text: Non_empty_XML_serializable_string
+    ) -> None:
+        Abstract_lang_string.__init__(self, language=language, text=text)
+
+
+@invariant(
+    lambda self: len(self.text) <= 2048,
+    "String shall have a maximum length of 2048 characters.",
+)
+class Definition_type_uom(Abstract_lang_string, DBC):
+    """
+    String with length 2048 maximum and minimum 1 characters and with language tags.
+    """
+
+    def __init__(
+        self, language: BCP_47_language_tag, text: Non_empty_XML_serializable_string
+    ) -> None:
+        Abstract_lang_string.__init__(self, language=language, text=text)
+
+
+@invariant(
+    lambda self: len(self) <= 256,
+    "String UoM shall have a maximum length of 256 characters.",
+)
+class String_uom(Non_empty_XML_serializable_string, DBC):
+    """
+    String with a minimum length of 1 and a maximum length of 256 characters.
+    """
+
+
+@invariant(
+    lambda self: len(self) <= 2048,
+    "Identifier UoM shall have a maximum length of 2048 characters.",
+)
+class Identifier_uom(Non_empty_XML_serializable_string, DBC):
+    """
+    Identifier with a minimum length of 1 and a maximum length of 2048 characters.
+    """
+
+
 @verification
 def is_BCP_47_for_english(text: str) -> bool:
     """Check that the :paramref:`text` corresponds to a BCP47 code for english."""
     pattern = f"^(en|EN)(-.*)?$"
 
     return match(pattern, text) is not None
+
+
+@invariant(
+    lambda self: lang_strings_have_unique_languages(self.preferred_name),
+    "Preferred name must specify unique languages.",
+)
+@invariant(
+    lambda self: len(self.preferred_name) >= 1,
+    "Preferred name must have at least one item.",
+)
+@invariant(
+    lambda self: not (self.definition is not None)
+    or lang_strings_have_unique_languages(self.definition),
+    "Definition must specify unique languages.",
+)
+@invariant(
+    lambda self: not (self.definition is not None) or len(self.definition) >= 1,
+    "Definition must be either not set or have at least one item.",
+)
+@invariant(
+    lambda self: not (self.preferred_name_quantity is not None)
+    or lang_strings_have_unique_languages(self.preferred_name_quantity),
+    "Preferred name quantity must specify unique languages.",
+)
+@invariant(
+    lambda self: not (self.preferred_name_quantity is not None)
+    or len(self.preferred_name_quantity) >= 1,
+    "Preferred name quantity must be either not set or have at least one item.",
+)
+@serialization(with_model_type=True)
+class Data_specification_uom(Data_specification_content):
+    """
+    Content of data specification template for concept descriptions for Units of
+    Measurement.
+    """
+
+    preferred_name: List["Lang_string_uom"]
+    """
+    Preferred name of the unit in different languages as defined by the
+    classification system.
+    """
+
+    symbol: "String_uom"
+    """
+    Symbol of the unit.
+    """
+
+    specific_unit_ID: Optional["String_uom"]
+    """
+    ID of the unit defined by the classification system.
+
+    .. note::
+
+        This is relevant if the classification system references the unit differently
+        from the concept description ID.
+    """
+
+    definition: Optional[List["Definition_type_uom"]]
+    """
+    Definition of the unit in different languages.
+    """
+
+    preferred_name_quantity: Optional[List["Lang_string_uom"]]
+    """
+    Preferred name of the unit's quantity in different languages as defined by the
+    classification system.
+
+    .. note::
+
+        :attr:`preferred_name_quantity` and :attr:`quantity_ID` must be consistent if
+        both attributes are set.
+
+    .. note::
+
+        If the classification system lists multiple quantities for the unit, exactly
+        one of those quantities must be selected in accordance with the properties
+        purpose.
+    """
+
+    quantity_ID: Optional["Identifier_uom"]
+    """
+    ID of the unit's quantity.
+
+    .. note::
+
+        :attr:`preferred_name_quantity` and :attr:`quantity_ID` must be consistent if
+        both attributes are set.
+    """
+
+    classification_system: Optional["String_uom"]
+    """
+    Name of the classification system used for the definition of units and quantities.
+
+    .. note::
+
+        The most prominent classification systems should be denoted as follows: "ECLASS",
+        "IEC CDD", "UNECE Rec 20", "UNECE Rec 21", "BIPM", "OPC UA", "SAMM".
+
+        This list is not exclusive.
+    """
+
+    classification_system_version: Optional["String_uom"]
+    """
+    Version of the classification system used for the definition of units and
+    quantities.
+
+    .. note::
+
+        The version shshould be denoted exactly as provided by the classification system.
+    """
+
+    def __init__(
+        self,
+        preferred_name: List["Lang_string_uom"],
+        symbol: "String_uom",
+        specific_unit_ID: Optional["String_uom"] = None,
+        definition: Optional[List["Definition_type_uom"]] = None,
+        preferred_name_quantity: Optional[List["Lang_string_uom"]] = None,
+        quantity_ID: Optional["Identifier_uom"] = None,
+        classification_system: Optional["String_uom"] = None,
+        classification_system_version: Optional["String_uom"] = None,
+    ) -> None:
+        self.preferred_name = preferred_name
+        self.symbol = symbol
+        self.specific_unit_ID = specific_unit_ID
+        self.definition = definition
+        self.preferred_name_quantity = preferred_name_quantity
+        self.quantity_ID = quantity_ID
+        self.classification_system = classification_system
+        self.classification_system_version = classification_system_version
 
 
 # fmt: off
