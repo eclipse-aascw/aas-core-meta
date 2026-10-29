@@ -2938,9 +2938,39 @@ Observed literals: {sorted(literal_set)!r}""")
             )
 
     def test_all_lists_have_min_length_at_least_one(self) -> None:
+        # NOTE (mristin):
+        # These lists of Part 2 are allowed to be empty, e.g., an empty page of
+        # results or an empty package.
+        exclude_properties = {
+            "Protocol_information.endpoint_protocol_version",
+            "Result.messages",
+            "Base_operation_result.messages",
+            "Operation_result.messages",
+            "Operation_result_value_only.messages",
+            "Paged_result.result",
+            "Package_description.AAS_IDs",
+            "Get_asset_administration_shells_result.result",
+            "Get_asset_administration_shells_metadata_result.result",
+            "Get_all_asset_administration_shells_recent_changes_result.result",
+            "Get_asset_administration_shell_descriptors_result.result",
+            "Get_concept_descriptions_result.result",
+            "Get_all_concept_descriptions_recent_changes_result.result",
+            "Get_package_descriptions_result.result",
+            "Get_path_items_result.result",
+            "Get_references_result.result",
+            "Get_submodel_descriptors_result.result",
+            "Get_submodel_elements_metadata_result.result",
+            "Get_submodel_elements_result.result",
+            "Get_all_submodels_recent_changes_result.result",
+            "Get_submodels_metadata_result.result",
+            "Get_submodels_result.result",
+            "Query.filters",
+        }
+
         tests.common.assert_all_lists_have_min_length_at_least_one(
             symbol_table=_META_MODEL.symbol_table,
             constraints_by_class=_META_MODEL.constraints_by_class,
+            exclude_properties=exclude_properties,
         )
 
     def test_that_all_list_of_lang_strings_are_lang_string_sets(self) -> None:

@@ -322,8 +322,15 @@ def assert_all_lists_have_min_length_at_least_one(
     constraints_by_class: Mapping[
         intermediate.ClassUnion, infer_for_schema.ConstraintsByValue
     ],
+    exclude_properties: Optional[AbstractSet[str]] = None,
 ) -> None:
-    """Assert that all lists are constrained to at least one item."""
+    """
+    Assert that all lists are constrained to at least one item.
+
+    :param exclude_properties:
+        if set, properties referenced as ``{class name}.{property name}``
+        are ignored -- used for the lists which are allowed to be empty
+    """
     # List of (property reference, error message)
     errors = []  # type: List[Tuple[str, str]]
 
@@ -336,6 +343,12 @@ def assert_all_lists_have_min_length_at_least_one(
         constraints_by_value = constraints_by_class.get(our_type, None)
 
         for prop in our_type.properties:
+            if (
+                exclude_properties is not None
+                and f"{our_type.name}.{prop.name}" in exclude_properties
+            ):
+                continue
+
             if isinstance(
                 intermediate.beneath_optional(prop.type_annotation),
                 intermediate.ListTypeAnnotation,
