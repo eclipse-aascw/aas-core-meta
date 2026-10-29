@@ -813,26 +813,30 @@ def date_time_UTC_less(that: str, other: str) -> Optional[bool]:
 
 
 @verification
-def date_time_UTC_less_or_invalid(that: str, other: str) -> bool:
+def date_time_UTC_less_or_equal_or_invalid(that: str, other: str) -> bool:
     """
-    Check that the date-time :paramref:`that` is before :paramref:`other`, unless
-    either of them is invalid.
+    Check that the date-time :paramref:`that` is before or at the same instant as
+    :paramref:`other`, unless either of them is invalid.
 
     The invalid date-times are reported by the invariants of
     :class:`Date_time_UTC`, so that we do not report them twice.
     See :func:`date_time_UTC_less`.
 
-    :param that: Date-time which is expected to come first
-    :param other: Date-time which is expected to come later
+    :param that: Date-time which is expected to come first or at the same instant
+    :param other: Date-time which is expected to come later or at the same instant
     :returns:
-        True if :paramref:`that` is before :paramref:`other`, or if either of
-        them is not a valid ``xs:dateTime`` in UTC
+        True if :paramref:`that` is before or at the same instant as
+        :paramref:`other`, or if either of them is not a valid ``xs:dateTime``
+        in UTC
     """
-    less = date_time_UTC_less(that, other)
-    if less is None:
+    # NOTE (mristin):
+    # The date-time :paramref:`that` is before or at the same instant as
+    # :paramref:`other` if and only if :paramref:`other` is not before it.
+    other_less = date_time_UTC_less(other, that)
+    if other_less is None:
         return True
 
-    return less
+    return not other_less
 
 
 # noinspection SpellCheckingInspection
@@ -2714,8 +2718,8 @@ class Has_data_specification(DBC):
 @invariant(
     lambda self:
     not (self.created_at is not None and self.updated_at is not None)
-    or date_time_UTC_less_or_invalid(self.created_at, self.updated_at),
-    "Created-at must be before updated-at."
+    or date_time_UTC_less_or_equal_or_invalid(self.created_at, self.updated_at),
+    "Created-at must be before or equal to updated-at."
 )
 # fmt: on
 class Administrative_information(Has_data_specification):
