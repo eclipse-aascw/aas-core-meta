@@ -1139,27 +1139,37 @@ class Test_date_time_UTC_less(unittest.TestCase):
                     expected, v3_2.date_time_UTC_less(that, other), (that, other)
                 )
 
-    def test_or_invalid_if_less(self) -> None:
-        assert v3_2.date_time_UTC_less_or_invalid(
+    def test_or_equal_or_invalid_if_less(self) -> None:
+        assert v3_2.date_time_UTC_less_or_equal_or_invalid(
             "2022-04-01T01:02:03Z", "2022-04-01T01:02:04Z"
         )
 
-    def test_or_invalid_if_equal_or_after(self) -> None:
-        assert not v3_2.date_time_UTC_less_or_invalid(
+    def test_or_equal_or_invalid_if_equal(self) -> None:
+        assert v3_2.date_time_UTC_less_or_equal_or_invalid(
             "2022-04-01T01:02:03Z", "2022-04-01T01:02:03Z"
         )
-        assert not v3_2.date_time_UTC_less_or_invalid(
-            "2022-04-01T01:02:04Z", "2022-04-01T01:02:03Z"
+        assert v3_2.date_time_UTC_less_or_equal_or_invalid(
+            "2022-04-01T01:02:03Z", "2022-04-01T01:02:03.000+00:00"
         )
 
         # NOTE (mristin):
-        # The end of April 1st is the same instant as the start of April 2nd,
-        # so it is not before it.
-        assert not v3_2.date_time_UTC_less_or_invalid(
+        # The end of April 1st is the same instant as the start of April 2nd.
+        assert v3_2.date_time_UTC_less_or_equal_or_invalid(
             "2022-04-01T24:00:00Z", "2022-04-02T00:00:00Z"
         )
+        assert v3_2.date_time_UTC_less_or_equal_or_invalid(
+            "2022-04-02T00:00:00Z", "2022-04-01T24:00:00Z"
+        )
 
-    def test_or_invalid_if_invalid(self) -> None:
+    def test_or_equal_or_invalid_if_after(self) -> None:
+        assert not v3_2.date_time_UTC_less_or_equal_or_invalid(
+            "2022-04-01T01:02:04Z", "2022-04-01T01:02:03Z"
+        )
+        assert not v3_2.date_time_UTC_less_or_equal_or_invalid(
+            "2022-04-01T01:02:03.1Z", "2022-04-01T01:02:03Z"
+        )
+
+    def test_or_equal_or_invalid_if_invalid(self) -> None:
         # NOTE (mristin):
         # The order of an invalid date-time is meaningless. The invalid date-times
         # are reported by the invariants of ``Date_time_UTC``, so the function
@@ -1192,8 +1202,8 @@ class Test_date_time_UTC_less(unittest.TestCase):
             "0000-04-01T01:02:03Z",
             "-0000-04-01T01:02:03Z",
         ):
-            assert v3_2.date_time_UTC_less_or_invalid(invalid, valid), invalid
-            assert v3_2.date_time_UTC_less_or_invalid(valid, invalid), invalid
+            assert v3_2.date_time_UTC_less_or_equal_or_invalid(invalid, valid), invalid
+            assert v3_2.date_time_UTC_less_or_equal_or_invalid(valid, invalid), invalid
 
 
 class Test_is_xs_g_month_day(unittest.TestCase):
