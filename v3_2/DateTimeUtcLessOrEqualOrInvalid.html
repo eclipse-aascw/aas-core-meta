@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DateTimeUtcLessOrInvalid</title>
+  <title>DateTimeUtcLessOrEqualOrInvalid</title>
   <link rel="stylesheet" href="../base.css">
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
@@ -1522,8 +1522,8 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-item active" href="DateTimeUtcLessOrInvalid.html">
-            DateTimeUtcLessOrInvalid
+          <a class="nav-item active" href="DateTimeUtcLessOrEqualOrInvalid.html">
+            DateTimeUtcLessOrEqualOrInvalid
           </a>
         </li>
         <li class="nav-item">
@@ -1960,7 +1960,7 @@
     </div>
     <div class="col-9 mx-0 overflow-auto" id="content">
       <h1>
-        DateTimeUtcLessOrInvalid<a class="aas-anchor-link" href="">🔗</a>
+        DateTimeUtcLessOrEqualOrInvalid<a class="aas-anchor-link" href="">🔗</a>
       </h1>
       <du>
         <dt>Type: <span class="aas-type-annotation">Transpilable verification function</span></dt>
@@ -1968,8 +1968,8 @@
       </du>
       <div class="aas-description">
         <div class="summary">
-          Check that the date-time <code>that</code> is before <code>other</code>, unless
-          either of them is invalid.
+          Check that the date-time <code>that</code> is before or at the same instant as
+          <code>other</code>, unless either of them is invalid.
         </div>
         <div class="remarks">
           The invalid date-times are reported by the invariants of
@@ -1981,29 +1981,30 @@
             <a name="that"></a>that<a class="aas-anchor-link" href="#that">🔗</a>
           </dt>
           <dd>
-            Date-time which is expected to come first
+            Date-time which is expected to come first or at the same instant
           </dd>
           <dt>
             <a name="other"></a>other<a class="aas-anchor-link" href="#other">🔗</a>
           </dt>
           <dd>
-            Date-time which is expected to come later
+            Date-time which is expected to come later or at the same instant
           </dd>
           <dt>
             <a name="return"></a>Return<a class="aas-anchor-link" href="return">🔗</a>
           </dt>
           <dd>
-            True if <code>that</code> is before <code>other</code>, or if either of
-            them is not a valid <code>xs:dateTime</code> in UTC
+            True if <code>that</code> is before or at the same instant as
+            <code>other</code>, or if either of them is not a valid <code>xs:dateTime</code>
+            in UTC
           </dd>
         </dl>
       </div>
       <h2>Code</h2>
-      <div class='highlight'><pre><span class='n'>less</span> <span class='o'>=</span> <span class='n'><a href='DateTimeUtcLess.html'>date_time_UTC_less</a></span><span class='p'>(</span><span class='n'>that</span><span class='p'>,</span> <span class='n'>other</span><span class='p'>)</span><span class='w'>
-</span><span class='k'>if</span> <span class='n'>less</span> <span class='ow'>is</span> <span class='kc'>None</span><span class='p'>:</span><span class='w'>
+      <div class='highlight'><pre><span class='n'>other_less</span> <span class='o'>=</span> <span class='n'><a href='DateTimeUtcLess.html'>date_time_UTC_less</a></span><span class='p'>(</span><span class='n'>other</span><span class='p'>,</span> <span class='n'>that</span><span class='p'>)</span><span class='w'>
+</span><span class='k'>if</span> <span class='n'>other_less</span> <span class='ow'>is</span> <span class='kc'>None</span><span class='p'>:</span><span class='w'>
 </span>    <span class='k'>return</span> <span class='kc'>True</span><span class='w'>
 </span><span class='w'>
-</span><span class='k'>return</span> <span class='n'>less</span><span class='w'>
+</span><span class='k'>return</span> <span class='ow'>not</span> <span class='n'>other_less</span><span class='w'>
 </span></pre></div>
     </div>
   </div>

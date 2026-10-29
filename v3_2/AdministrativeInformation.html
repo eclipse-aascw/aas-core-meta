@@ -1522,8 +1522,8 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-item" href="DateTimeUtcLessOrInvalid.html">
-            DateTimeUtcLessOrInvalid
+          <a class="nav-item" href="DateTimeUtcLessOrEqualOrInvalid.html">
+            DateTimeUtcLessOrEqualOrInvalid
           </a>
         </li>
         <li class="nav-item">
@@ -2119,14 +2119,14 @@
 <span class='ow'>or</span> <span class='p'>(</span><span class='nb'>len</span><span class='p'>(</span><span class='bp'>self</span><span class='o'>.</span><a href="AdministrativeInformation.html#embeddedDataSpecifications">embeddedDataSpecifications</a><span class='p'>)</span> <span class='o'>&gt;=</span> 1<span class='p'>)</span></pre></div>
         </li>
         <li>
-          Created-at must be before updated-at.<br/>
+          Created-at must be before or equal to updated-at.<br/>
           <div class='highlight'><pre><span class='ow'>not</span> <span class='p'>(</span>
     <span class='p'>(</span>
         <span class='p'>(</span><span class='bp'>self</span><span class='o'>.</span><a href="AdministrativeInformation.html#createdAt">createdAt</a> <span class='ow'>is not</span> <span class='kc'>None</span><span class='p'>)</span>
         <span class='ow'>and</span> <span class='p'>(</span><span class='bp'>self</span><span class='o'>.</span><a href="AdministrativeInformation.html#updatedAt">updatedAt</a> <span class='ow'>is not</span> <span class='kc'>None</span><span class='p'>)</span>
     <span class='p'>)</span>
 <span class='p'>)</span>
-<span class='ow'>or</span> <span class='nf'><a href='DateTimeUtcLessOrInvalid.html'>DateTimeUtcLessOrInvalid</a></span><span class='p'>(</span>
+<span class='ow'>or</span> <span class='nf'><a href='DateTimeUtcLessOrEqualOrInvalid.html'>DateTimeUtcLessOrEqualOrInvalid</a></span><span class='p'>(</span>
     <span class='bp'>self</span><span class='o'>.</span><a href="AdministrativeInformation.html#createdAt">createdAt</a>,
     <span class='bp'>self</span><span class='o'>.</span><a href="AdministrativeInformation.html#updatedAt">updatedAt</a>
 <span class='p'>)</span></pre></div>
