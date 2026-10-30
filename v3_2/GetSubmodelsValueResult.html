@@ -1972,14 +1972,23 @@
             in the specification.
           </p>
           <div class="alert alert-info">
-            The result is given in the ValueOnly serialization, 
-            <em>
-              i.e.
-            </em>, as
-            a JSON object whose keys are the ID-shorts of the submodel elements
-            and whose values are their ValueOnly serializations. Their shape
-            depends on the concrete submodel elements and can not be pinned down
-            statically, so the result is represented as an open JSON object.
+            <p>
+              Each item of the result is a submodel given in the ValueOnly
+              serialization, 
+              <em>
+                i.e.
+              </em>, as a JSON object whose keys are the ID-shorts
+              of the submodel elements and whose values are their ValueOnly
+              serializations. Their shape depends on the concrete submodel elements
+              and can not be pinned down statically, so each item is represented
+              as an open JSON object.
+            </p>
+            <p>
+              Unlike the OpenAPI schema, which types the result as a single
+              SubmodelValue since V3.0.4, we follow BaSyx Go and represent
+              the result as an array of items. We suspect the OpenAPI schema to be
+              buggy here.
+            </p>
           </div>
           <p>
             See:
@@ -2012,7 +2021,7 @@
         </dd>
         <dt>
           <a name="result"></a>
-          result: <span class="aas-type-annotation">Optional[JSONObject[<a href="IdShortType.html">IdShortType</a>]]</span>
+          result: <span class="aas-type-annotation">Optional[List[JSONObject[<a href="IdShortType.html">IdShortType</a>]]]</span>
           <a class="aas-anchor-link" href="#result">🔗</a>
         </dt>
 
