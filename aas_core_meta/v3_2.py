@@ -10330,11 +10330,28 @@ class Entity_value(DBC):
 # paging_metadata by hand (same reasoning as for Result/
 # Base_operation_result/Operation_result above).
 #
-# GetSubmodelElementsValueResult and GetSubmodelsValueResult type their
-# "result" as ValueOnly-shaped JSON, so we represent it as an open JSON object
-# keyed by ID-shorts. Mind that, unlike all the other GetXxxResult schemas,
-# the OpenAPI schema types these results as a single JSON object, not as
-# an array of items, and we follow it here.
+# GetSubmodelElementsValueResult and GetSubmodelsValueResult type the items
+# of their "result" as ValueOnly-shaped JSON, so we represent each item as
+# an open JSON object keyed by ID-shorts.
+#
+# Since V3.0.4 (https://github.com/admin-shell-io/aas-specs-api/pull/414),
+# the OpenAPI types these results as a single JSON object instead of an array
+# of items. We deliberately deviate from the OpenAPI here and follow BaSyx Go
+# (https://github.com/eclipse-basyx/basyx-go-components), which keeps both
+# results as arrays, as did the OpenAPI up to V3.0.3, all the other GetXxxResult
+# schemas, and the prose of the specification (cardinality 0..* of result).
+#
+# In particular, a single SubmodelValue can not hold a page of several
+# submodels, since the ValueOnly serialization carries no identifier of
+# the submodel, and the ID-shorts may repeat across the submodels. Each item
+# of the result of GetSubmodelElementsValueResult is a JSON object with
+# a single key, the ID-short of the submodel element, so that the ID-short is
+# not lost, as it would be for a bare PropertyValue.
+#
+# We therefore suspect this to be a bug in the OpenAPI. The change in V3.0.4
+# refers to https://github.com/admin-shell-io/aas-specs-api/issues/251,
+# which only concerns removing the wrapping "submodelElements" from
+# SubmodelValue, and not the paging.
 #
 # See:
 # https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
@@ -10710,11 +10727,16 @@ class Get_submodel_elements_value_result(DBC):
 
     .. note::
 
-        The result is given in the ValueOnly serialization, *i.e.*, as
-        a JSON object whose keys are the ID-shorts of the submodel elements
-        and whose values are their ValueOnly serializations. Their shape
-        depends on the concrete submodel elements and can not be pinned down
-        statically, so the result is represented as an open JSON object.
+        Each item of the result is a submodel element given in the ValueOnly
+        serialization, *i.e.*, as a JSON object with a single key, the ID-short
+        of the submodel element, whose value is its ValueOnly serialization.
+        The shape of the value depends on the concrete submodel element and
+        can not be pinned down statically, so each item is represented as
+        an open JSON object.
+
+        Unlike the OpenAPI schema, which types the result as a single JSON
+        object since V3.0.4, we follow BaSyx Go and represent the result as
+        an array of items. We suspect the OpenAPI schema to be buggy here.
 
     See:
     https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
@@ -10726,13 +10748,13 @@ class Get_submodel_elements_value_result(DBC):
     the result set.
     """
 
-    result: Optional[JSONObject["ID_short_type"]]
+    result: Optional[List[JSONObject["ID_short_type"]]]
     """The returned items."""
 
     def __init__(
         self,
         paging_metadata: "Paging_metadata",
-        result: Optional[JSONObject["ID_short_type"]] = None,
+        result: Optional[List[JSONObject["ID_short_type"]]] = None,
     ) -> None:
         self.paging_metadata = paging_metadata
         self.result = result
@@ -10834,11 +10856,17 @@ class Get_submodels_value_result(DBC):
 
     .. note::
 
-        The result is given in the ValueOnly serialization, *i.e.*, as
-        a JSON object whose keys are the ID-shorts of the submodel elements
-        and whose values are their ValueOnly serializations. Their shape
-        depends on the concrete submodel elements and can not be pinned down
-        statically, so the result is represented as an open JSON object.
+        Each item of the result is a submodel given in the ValueOnly
+        serialization, *i.e.*, as a JSON object whose keys are the ID-shorts
+        of the submodel elements and whose values are their ValueOnly
+        serializations. Their shape depends on the concrete submodel elements
+        and can not be pinned down statically, so each item is represented
+        as an open JSON object.
+
+        Unlike the OpenAPI schema, which types the result as a single
+        SubmodelValue since V3.0.4, we follow BaSyx Go and represent
+        the result as an array of items. We suspect the OpenAPI schema to be
+        buggy here.
 
     See:
     https://industrialdigitaltwin.io/aas-specifications/IDTA-01002/v3.2/http-rest-api/http-rest-api.html#pagination
@@ -10850,13 +10878,13 @@ class Get_submodels_value_result(DBC):
     the result set.
     """
 
-    result: Optional[JSONObject["ID_short_type"]]
+    result: Optional[List[JSONObject["ID_short_type"]]]
     """The returned items."""
 
     def __init__(
         self,
         paging_metadata: "Paging_metadata",
-        result: Optional[JSONObject["ID_short_type"]] = None,
+        result: Optional[List[JSONObject["ID_short_type"]]] = None,
     ) -> None:
         self.paging_metadata = paging_metadata
         self.result = result

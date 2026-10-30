@@ -2555,9 +2555,11 @@ class Test_assertions(unittest.TestCase):
             "Get_submodel_descriptors_result.result",
             "Get_submodel_elements_metadata_result.result",
             "Get_submodel_elements_result.result",
+            "Get_submodel_elements_value_result.result",
             "Get_all_submodels_recent_changes_result.result",
             "Get_submodels_metadata_result.result",
             "Get_submodels_result.result",
+            "Get_submodels_value_result.result",
         }
 
         symbol_table = _META_MODEL.symbol_table
@@ -2971,9 +2973,11 @@ Observed literals: {sorted(literal_set)!r}""")
             "Get_submodel_descriptors_result.result",
             "Get_submodel_elements_metadata_result.result",
             "Get_submodel_elements_result.result",
+            "Get_submodel_elements_value_result.result",
             "Get_all_submodels_recent_changes_result.result",
             "Get_submodels_metadata_result.result",
             "Get_submodels_result.result",
+            "Get_submodels_value_result.result",
             "Query.filters",
         }
 
