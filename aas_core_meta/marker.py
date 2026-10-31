@@ -46,9 +46,17 @@ class JSONObject(Mapping[K, "JSONValue"]):
 
 JSONArray = Sequence["JSONValue"]
 
-#: Represent an arbitrary JSON-able value, be it a primitive, an array or
-#: an open, JSON-object-shaped value (see :class:`JSONObject`).
-JSONValue = Union[bool, int, float, str, JSONArray, JSONObject[str]]
+#: Represent an arbitrary JSON-able value, be it a JSON null, a primitive, an array
+#: or an open, JSON-object-shaped value (see :class:`JSONObject`).
+#:
+#: A JSON null is represented as ``None`` and may appear at any depth, including
+#: as the value itself (*e.g.*, an empty element of a submodel element list is
+#: serialized as ``null`` in the value-only JSON to preserve the list indices).
+#:
+#: An optional ``JSONValue`` holding a JSON null counts as absent. Over
+#: a non-optional ``JSONValue``, ``is None`` and ``is not None`` check for
+#: a JSON null.
+JSONValue = Union[None, bool, int, float, str, JSONArray, JSONObject[str]]
 
 
 @overload
