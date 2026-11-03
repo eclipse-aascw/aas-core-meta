@@ -10938,9 +10938,6 @@ class Get_submodels_value_result(DBC):
 #   decidable, and a date-time attribute is covered by
 #   :class:`Attribute_operand`.
 #
-# * We require :attr:`Query.filters` to have at least one item, if specified,
-#   in line with the other lists in the meta-model.
-#
 # * The schema limits the identifier in a ``REFERENCE`` attribute to 2048
 #   characters with a bounded repetition (``{1,2048}``) in the pattern. We
 #   use an unbounded repetition (``+``) in :func:`matches_reference_identifier`
@@ -12247,7 +12244,12 @@ class Query(DBC):
     """The condition which the returned objects need to fulfill"""
 
     filters: Annotated[Optional[List["Query_filter"]], json_name("$filters")]
-    """Filters to reduce the returned data"""
+    """
+    Filters to reduce the returned data
+
+    The list can be empty, as the grammar allows ``$filters`` to be followed by
+    zero filters. Elements without a filter remain unfiltered.
+    """
 
     def __init__(
         self,
