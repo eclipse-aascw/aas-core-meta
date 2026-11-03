@@ -7543,7 +7543,7 @@ class Service_specification_profile_enum(Enum):
     )
     """
     Indicates that the server implemented all features of the Submodel Service
-    Specification Value Profile in version 3.2.
+    Specification Read Profile in version 3.2.
     """
 
     Submodel_service_specification_SSP_003_V3_0 = (
@@ -7567,7 +7567,7 @@ class Service_specification_profile_enum(Enum):
     )
     """
     Indicates that the server implemented all features of the Submodel Service
-    Specification Read Profile in version 3.2.
+    Specification Value Profile in version 3.2.
     """
 
     AASX_file_server_service_specification_SSP_001_V3_0 = (
@@ -7612,7 +7612,7 @@ class Service_specification_profile_enum(Enum):
     )
     """
     Indicates that the server implemented all details of the AASX File Server
-    Service Specification Read Profile in version 3.2.
+    Service Specification Async Profile in version 3.2.
     """
 
     AAS_registry_service_specification_SSP_001_V3_0 = (
@@ -7842,7 +7842,7 @@ class Service_specification_profile_enum(Enum):
     )
     """
     Indicates that the server implemented all details of the Discovery Service
-    Specification Read Profile in version 3.1.
+    Specification Read Profile in version 3.2.
     """
 
     AAS_repository_service_specification_SSP_001_V3_0 = (
@@ -7869,7 +7869,7 @@ class Service_specification_profile_enum(Enum):
     )
     """
     Indicates that the server implemented all details of the Asset Administration
-    Shell Repository Service Specification Read Profile in version 3.2.
+    Shell Repository Service Specification Full Profile in version 3.2.
     """
 
     AAS_repository_service_specification_SSP_002_V3_0 = (
@@ -7933,6 +7933,15 @@ class Service_specification_profile_enum(Enum):
     """
     Indicates that the server implemented all details of the Asset Administration
     Shell Repository Service Specification Identifiable Profile in version 3.2.
+    """
+
+    AAS_repository_service_specification_SSP_006_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "AssetAdministrationShellRepositoryServiceSpecification/SSP-006"
+    )
+    """
+    Indicates that the server implemented all details of the Asset Administration
+    Shell Repository Service Specification History Profile in version 3.2.
     """
 
     Submodel_repository_service_specification_SSP_001_V3_0 = (
@@ -8070,6 +8079,15 @@ class Service_specification_profile_enum(Enum):
     Repository Specification Signature Profile in version 3.2.
     """
 
+    Submodel_repository_service_specification_SSP_007_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "SubmodelRepositoryServiceSpecification/SSP-007"
+    )
+    """
+    Indicates that the server implemented all details of the Submodel Service
+    Repository Specification History Profile in version 3.2.
+    """
+
     Concept_description_repository_service_specification_SSP_001_V3_0 = (
         "https://admin-shell.io/aas/API/3/0/"
         "ConceptDescriptionRepositoryServiceSpecification/SSP-001"
@@ -8086,6 +8104,15 @@ class Service_specification_profile_enum(Enum):
     """
     Indicates that the server implemented all details of the Concept Description
     Repository Service Specification Profile in version 3.1.
+    """
+
+    Concept_description_repository_service_specification_SSP_001_V3_2 = (
+        "https://admin-shell.io/aas/API/3/2/"
+        "ConceptDescriptionRepositoryServiceSpecification/SSP-001"
+    )
+    """
+    Indicates that the server implemented all details of the Concept Description
+    Repository Service Specification Full Profile in version 3.2.
     """
 
     Concept_description_repository_service_specification_SSP_002_V3_2 = (
