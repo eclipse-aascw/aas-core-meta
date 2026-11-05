@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 """Generate HTML for a given meta-model."""
 
 import collections

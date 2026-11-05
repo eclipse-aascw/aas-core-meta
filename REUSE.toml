@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
+version = 1
+
+# Prose and metadata where a header would end up in the rendered output
+# (e.g., README shown on PyPI) or which should stay free of comments.
+[[annotations]]
+path = [
+    "AUTHORS",
+    "README.rst",
+    "CHANGELOG.rst",
+    "CONTRIBUTING.rst",
+    "aas_core_meta/py.typed",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2024 aas-core-meta AUTHORS"
+SPDX-License-Identifier = "MIT"
