@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 """Generate HTML identifiers based on the identifiers from the meta-model."""
 
 from typing import Union

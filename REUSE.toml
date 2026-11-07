@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
+version = 1
+
+# Prose and metadata where a header would end up in the rendered output
+# (e.g., README shown on PyPI) or which should stay free of comments.
+[[annotations]]
+path = [
+    "AUTHORS",
+    "README.rst",
+    "CHANGELOG.rst",
+    "CONTRIBUTING.rst",
+    "aas_core_meta/py.typed",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2024 aas-core-meta AUTHORS"
+SPDX-License-Identifier = "MIT"
+
+# The meta-models transcribe the AAS specification: their docstrings quote the
+# definitions of the classes, attributes and constraints from the respective
+# version of the specification. That text keeps the license of the
+# specification, next to the MIT header of the files for our own code. The
+# specifications published by IDTA and the Release Candidate 2 of Plattform
+# Industrie 4.0 are licensed under CC BY 4.0.
+[[annotations]]
+path = [
+    "aas_core_meta/v3.py",
+    "aas_core_meta/v3_1.py",
+    "aas_core_meta/v3_2.py",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Industrial Digital Twin Association e. V."
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = [
+    "aas_core_meta/v3rc2.py",
+    "obsolete/2022-04-09/v3rc02-with-data-specifications/v3rc2.py",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2022 Plattform Industrie 4.0"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# The Release Candidate 1 of the specification was published by the Federal
+# Ministry for Economic Affairs and Energy (BMWi) and written by Plattform
+# Industrie 4.0 under CC BY-ND 3.0 DE.
+[[annotations]]
+path = "obsolete/2022-06-30/v3rc1.py"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2020 Plattform Industrie 4.0 and Federal Ministry for Economic Affairs and Energy (BMWi)"
+SPDX-License-Identifier = "CC-BY-ND-3.0-DE"
