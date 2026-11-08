@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 """Provide the meta model for Asset Administration Shell V3 Release Candidate 1."""
 from enum import Enum
 from re import match

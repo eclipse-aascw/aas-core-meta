@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 [build-system]
 requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -13,7 +17,8 @@ dependencies = [
     "mypy==1.19.1",
     "pylint==4.0.4",
     "asttokens>=2.0.8,<3",
-    "aas-core-codegen==0.0.27rc5"
+    "aas-core-codegen==0.0.27rc5",
+    "reuse==6.3.0",
 ]
 
 [tool.setuptools]

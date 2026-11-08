@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 """Provide meta-models for Asset Administration Shell information model."""
 
 __version__ = "2026.10.1a1"

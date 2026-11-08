@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 """Run pre-commit checks on the repository."""
 
 import argparse
@@ -20,6 +24,7 @@ class Step(enum.Enum):
     TEST = "test"
     CHECK_INIT_AND_PYPROJECT_CONSISTENT = "check-init-and-pyproject-consistent"
     PYLINT = "pylint"
+    REUSE = "reuse"
 
 
 def call_and_report(
@@ -246,6 +251,18 @@ def main() -> int:
             return 1
     else:
         print("Skipped pylint'ing.")
+
+    if Step.REUSE in selects and Step.REUSE not in skips:
+        print("Checking the REUSE compliance...")
+        exit_code = call_and_report(
+            verb="check the REUSE compliance",
+            cmd=[sys.executable, "-m", "reuse", "lint"],
+            cwd=repo_root,
+        )
+        if exit_code != 0:
+            return 1
+    else:
+        print("Skipped checking the REUSE compliance.")
 
     return 0
 

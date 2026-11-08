@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 """
 Provide an implementation of the Asset Administration Shell (AAS) V3.0.
 

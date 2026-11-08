@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 aas-core-meta AUTHORS
+#
+# SPDX-License-Identifier: MIT
+
 """
 Provide the meta model for Asset Administration Shell V3.0 Release Candidate 2.
 
